@@ -1,0 +1,766 @@
+{
+  "name": "Bagnetchon \u2014 Order to Invoice (sub)",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "3461e968-a53c-429d-98be-f87e2e7fec09",
+      "name": "From Caller",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "/**\n * Sub-workflow \u2014 \"Validate Payload\" Code node\n * ----------------------------------------------------------------------------\n * Defensive shape-check on the normalized order payload received from any\n * caller (the Google Sheet intake today, the Supabase intake later).\n *\n * On any missing required field, we THROW \u2014 n8n's \"Error Workflow\" setting\n * on this workflow routes that to the Notify sub-workflow.\n */\nconst p = $input.item.json;\nconst errors = [];\n\nif (!p || typeof p !== 'object') errors.push('payload is missing');\nif (!p?.source) errors.push('source is missing');\nif (!p?.source_row_id) errors.push('source_row_id is missing');\nif (!p?.customer?.email && !p?.customer?.phone) {\n  errors.push('need at least email or phone for contact dedupe');\n}\nif (!p?.customer?.name) errors.push('customer name is missing');\nif (!p?.item_quantities || Object.keys(p.item_quantities).length === 0) {\n  errors.push('no item quantities supplied');\n}\n\nif (errors.length) {\n  throw new Error('Invalid order payload: ' + errors.join('; '));\n}\n\nreturn [{ json: p }];\n"
+      },
+      "id": "dc309a6a-f4a1-49ed-89bf-e5fbfff81826",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GS_SPREADSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $env.GS_ITEM_CONFIG_SHEET }}"
+        },
+        "options": {
+          "returnFirstMatch": false
+        }
+      },
+      "id": "325e81c5-49e2-45dd-a2b0-cd4a49103e99",
+      "name": "Load item_config",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "88a20460-8daf-4740-8aba-55331b142f9e",
+              "name": "cf_source_row_id",
+              "value": "={{ $('Validate Payload').item.json.source_row_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "06a0354a-415c-46d8-a236-69482c3cfd37",
+      "name": "Build Idempotency Key",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ZOHO_BASE_URL }}/invoices",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "zohoOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-com-zoho-invoice-organizationid",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            }
+          ]
+        },
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "organization_id",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            },
+            {
+              "name": "cf_source_row_id",
+              "value": "={{ $('Build Idempotency Key').item.json.cf_source_row_id }}"
+            }
+          ]
+        }
+      },
+      "id": "77a78b6d-e0b3-4357-a387-946829e874e5",
+      "name": "Check Existing Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 2000,
+      "notes": "Filters Zoho invoices by the custom field cf_source_row_id. If any rows return, we exit without creating.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "6cd1c50e-d35a-4d87-bede-ec12bde02499",
+              "leftValue": "={{ ($json.invoices || []).length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "00a6a6f4-66b4-44e8-be63-1378cf0745d2",
+      "name": "Already Invoiced?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "/**\n * Sub-workflow \u2014 \"Exit Idempotent\" Code node\n * ----------------------------------------------------------------------------\n * Reached when the existing-invoice GET returns a hit for this\n * source_row_id. We do NOT create anything; we just return a summary\n * pointing at the already-created invoice.\n */\nconst order = $('Validate Payload').item.json;\nconst existing = $('Check Existing Invoice').item.json.invoices?.[0] ?? null;\n\nreturn [{\n  json: {\n    ok: true,\n    idempotent: true,\n    source: order.source,\n    source_row_id: order.source_row_id,\n    invoice_id: existing?.invoice_id ?? null,\n    invoice_status: existing?.status ?? null,\n    invoice_number: existing?.invoice_number ?? null,\n    message: 'order already invoiced \u2014 skipped',\n  },\n}];\n"
+      },
+      "id": "f3f17a94-7901-4995-92da-d0ba1ad5cdb6",
+      "name": "Exit Idempotent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ZOHO_BASE_URL }}/contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "zohoOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-com-zoho-invoice-organizationid",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            }
+          ]
+        },
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "organization_id",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            },
+            {
+              "name": "email_contains",
+              "value": "={{ $('Validate Payload').item.json.customer.email }}"
+            }
+          ]
+        }
+      },
+      "id": "f373eed2-2da2-4394-b2da-97f6d446612e",
+      "name": "Find Contact by Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        420
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cff5b55c-c3f7-498b-87ba-f3d8206404a8",
+              "leftValue": "={{ ($json.contacts || []).length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7971ca77-9af7-45cc-b1c2-6813c45fdd8e",
+      "name": "Has Email Match?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1760,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ZOHO_BASE_URL }}/contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "zohoOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-com-zoho-invoice-organizationid",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            }
+          ]
+        },
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "organization_id",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            },
+            {
+              "name": "phone_contains",
+              "value": "={{ $('Validate Payload').item.json.customer.phone }}"
+            }
+          ]
+        }
+      },
+      "id": "e89d709b-f4c1-4833-b633-e547e6a8bff6",
+      "name": "Find Contact by Phone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        540
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "5da8ff64-b71b-4a37-a2be-53dc9488418c",
+              "leftValue": "={{ ($json.contacts || []).length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f925f840-9097-4254-8697-c08f841edebb",
+      "name": "Has Phone Match?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2200,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "/**\n * Sub-workflow \u2014 \"Build Create-Contact Body\" Code node\n * ----------------------------------------------------------------------------\n * Runs only when both the email and phone lookups failed. Builds the body\n * for POST /contacts.\n */\nconst order = $('Validate Payload').item.json;\nconst c = order.customer;\n\nreturn [{\n  json: {\n    contact_name: c.name,\n    contact_type: 'customer',\n    contact_persons: [{\n      first_name: c.name,\n      email: c.email || undefined,\n      phone: c.phone || undefined,\n      is_primary_contact: true,\n    }],\n  },\n}];\n"
+      },
+      "id": "73f09e95-6baa-447f-b8b5-99d185babba0",
+      "name": "Build Create-Contact Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZOHO_BASE_URL }}/contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "zohoOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-com-zoho-invoice-organizationid",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            }
+          ]
+        },
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "organization_id",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "43520c51-807a-4a74-bc76-fe2fdad5544e",
+      "name": "Create Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        660
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "numberOfInputs": 3
+      },
+      "id": "9e346b77-c10e-4d56-9d89-1d9561f132f6",
+      "name": "Contact Resolved",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2640,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "/**\n * Sub-workflow \u2014 \"Resolve Contact\" Code node\n * ----------------------------------------------------------------------------\n * Reads the outputs of the three preceding contact-resolution HTTP nodes\n * (Find by Email \u2192 Find by Phone \u2192 Create) and picks the contact_id from\n * whichever path succeeded. Only one of the three branches will have run\n * for any single execution; the others will be undefined.\n *\n * Output is the normalized order plus `contact_id` and `contact_lookup`\n * (\"matched_email\" | \"matched_phone\" | \"created\"), passed forward.\n */\nconst order = $('Validate Payload').item.json;\n\nlet contact_id = null;\nlet lookup = null;\n\n// Email-match branch\ntry {\n  const out = $('Find Contact by Email').item?.json;\n  if (out?.contacts?.length > 0) {\n    contact_id = out.contacts[0].contact_id;\n    lookup = 'matched_email';\n  }\n} catch (_) { /* branch didn't run */ }\n\n// Phone-match branch\nif (!contact_id) {\n  try {\n    const out = $('Find Contact by Phone').item?.json;\n    if (out?.contacts?.length > 0) {\n      contact_id = out.contacts[0].contact_id;\n      lookup = 'matched_phone';\n    }\n  } catch (_) { /* branch didn't run */ }\n}\n\n// Create branch\nif (!contact_id) {\n  try {\n    const out = $('Create Contact').item?.json;\n    contact_id = out?.contact?.contact_id || null;\n    if (contact_id) lookup = 'created';\n  } catch (_) { /* branch didn't run */ }\n}\n\nif (!contact_id) {\n  throw new Error('Could not resolve a Zoho contact_id (no match and no create result).');\n}\n\nreturn [{ json: { ...order, contact_id, contact_lookup: lookup } }];\n"
+      },
+      "id": "5c89c2ba-8a5a-4483-bbb0-ee486f6a0fb4",
+      "name": "Resolve Contact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "/**\n * Sub-workflow \u2014 \"Build Line Items\" Code node\n * ----------------------------------------------------------------------------\n * Joins the order's qty map against the `item_config` table to produce Zoho\n * line_items[]. Two cases:\n *\n *   - Config row has a non-empty `zoho_item_id`:\n *       \u2192 catalogued line: { item_id, quantity }\n *\n *   - Config row exists but `zoho_item_id` is blank\n *     (or no config row at all for that column):\n *       \u2192 ad-hoc line: { name, rate, quantity, description }\n *       \u2192 review flag appended so notes show \"[REVIEW: uncatalogued item ...]\"\n *\n * `item_config` columns (single source of truth \u2014 edit the sheet, not this code):\n *   sheet_column_header | zoho_item_id | item_name | active | default_rate\n *\n * `default_rate` is an OPTIONAL convenience column used only for the\n * uncatalogued / ad-hoc case so the draft has a non-zero starting price.\n * Leave it blank and you'll get rate=0 (still safe \u2014 it's a draft).\n */\nconst order = $('Resolve Contact').item.json;\nconst cfgRows = $('Load item_config').all().map(i => i.json);\n\nconst active = cfgRows.filter(r =>\n  String(r.active ?? '').trim().toLowerCase() === 'true'\n);\nconst byHeader = new Map(\n  active.map(r => [String(r.sheet_column_header ?? '').trim(), r])\n);\n\nconst line_items = [];\nconst review = [];\n\nfor (const [header, rawQty] of Object.entries(order.item_quantities)) {\n  const qty = Number(rawQty);\n  if (!Number.isFinite(qty) || qty <= 0) continue;\n\n  const row = byHeader.get(header);\n\n  if (!row) {\n    // Sheet column with no item_config row at all.\n    review.push(`no item_config row for column \"${header}\" (qty ${qty})`);\n    line_items.push({\n      name: header,\n      rate: 0,\n      quantity: qty,\n      description: 'AD-HOC: no item_config row matched this column header',\n    });\n    continue;\n  }\n\n  const zohoItemId = String(row.zoho_item_id ?? '').trim();\n  if (zohoItemId) {\n    line_items.push({ item_id: zohoItemId, quantity: qty });\n  } else {\n    const itemName = String(row.item_name ?? header).trim();\n    const rate = Number(row.default_rate ?? 0) || 0;\n    review.push(`uncatalogued item \"${itemName}\" (qty ${qty}) \u2014 zoho_item_id is blank in item_config`);\n    line_items.push({\n      name: itemName,\n      rate,\n      quantity: qty,\n      description: 'AD-HOC: zoho_item_id blank in item_config',\n    });\n  }\n}\n\nif (line_items.length === 0) {\n  throw new Error('No line items produced \u2014 check item_config or the row qty columns.');\n}\n\nreturn [{ json: { ...order, line_items, review } }];\n"
+      },
+      "id": "f74715d5-f17b-4538-9563-eaba67c6c022",
+      "name": "Build Line Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "/**\n * Sub-workflow \u2014 \"Build Invoice Payload\" Code node\n * ----------------------------------------------------------------------------\n * Assembles the full Zoho Invoice create-request body from the contact id,\n * line items, and custom fields.\n *\n * Zoho custom fields are referenced by `label` here. The labels MUST match\n * what you create in:\n *   Zoho Invoice \u2192 Settings \u2192 Custom Fields \u2192 Invoices\n *\n *   Label                    Data type\n *   ----------------------   -------------\n *   cf_source_row_id         Single line\n *   cf_fulfillment_date      Date\n *   cf_fulfillment_type      Dropdown (Pickup, Delivery)\n *   cf_payment_method        Single line\n *\n * Invoice date = today (creation date). Fulfillment date is a custom field,\n * NOT the invoice date, per spec.\n */\nconst order = $('Build Line Items').item.json;\n\n// Notes: combine the customer's special instructions with any uncatalogued\n// item review flags so the draft is loud about anything needing attention.\nconst notes = [\n  order.special_instructions || '',\n  ...(order.review || []).map(r => `[REVIEW: uncatalogued item \u2014 ${r}]`),\n]\n  .filter(Boolean)\n  .join('\\n')\n  .trim();\n\nconst payload = {\n  customer_id: order.contact_id,\n  date: new Date().toISOString().slice(0, 10),\n  line_items: order.line_items,\n  notes,\n  custom_fields: [\n    { label: 'cf_source_row_id',    value: order.source_row_id },\n    { label: 'cf_fulfillment_date', value: order.fulfillment.date },\n    { label: 'cf_fulfillment_type', value: order.fulfillment.type },\n    { label: 'cf_payment_method',   value: order.payment_method },\n  ],\n};\n\nif (order.fulfillment.address) {\n  payload.shipping_address = { address: order.fulfillment.address };\n}\n\nreturn [{ json: { ...order, invoice_payload: payload } }];\n"
+      },
+      "id": "5fda9629-e89d-4d91-94ca-88f0ac0e6765",
+      "name": "Build Invoice Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZOHO_BASE_URL }}/invoices",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "zohoOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-com-zoho-invoice-organizationid",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            }
+          ]
+        },
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "organization_id",
+              "value": "={{ $env.ZOHO_ORG_ID }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.invoice_payload) }}"
+      },
+      "id": "ddfda773-81f9-4e0a-a7bc-74c3e3468438",
+      "name": "Create Draft Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3520,
+        420
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 2000,
+      "disabled": true,
+      "notes": "DISABLED on purpose. Enable after item_config has real zoho_item_id values and you've verified one test order. Creates a DRAFT invoice (status=draft); AUTO_FINALIZE is not wired \u2014 flipping it requires a deliberate workflow edit.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GS_SPREADSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $env.GS_RESPONSES_SHEET }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.writeback.row_number }}",
+            "Invoice ID": "={{ $json.invoice_id }}",
+            "Sync Status": "={{ $json.invoice_status }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "7970c507-1513-4142-8246-a22c49e7c967",
+      "name": "Write back to Source Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3740,
+        420
+      ],
+      "disabled": true,
+      "notes": "DISABLED on purpose. Enable after the Create Draft Invoice step is verified. Updates the 'Invoice ID' and 'Sync Status' columns on the responses sheet.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "/**\n * Sub-workflow \u2014 \"Return Summary\" Code node\n * ----------------------------------------------------------------------------\n * Final node. Returns a small JSON summary to the calling workflow so the\n * intake can log or display it. Keep this lean \u2014 secrets must NEVER leak\n * back into the caller's context.\n */\nconst order = $('Build Invoice Payload').item.json;\nconst invoice = $('Create Draft Invoice')?.item?.json?.invoice ?? null;\n\nreturn [{\n  json: {\n    ok: true,\n    idempotent: false,\n    source: order.source,\n    source_row_id: order.source_row_id,\n    contact_id: order.contact_id,\n    contact_lookup: order.contact_lookup,\n    invoice_id: invoice?.invoice_id ?? null,\n    invoice_status: invoice?.status ?? 'draft',\n    invoice_number: invoice?.invoice_number ?? null,\n    review_flags: order.review ?? [],\n  },\n}];\n"
+      },
+      "id": "c4582880-df9a-448f-a6f0-7b4f5bffecc8",
+      "name": "Return Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "From Caller": {
+      "main": [
+        [
+          {
+            "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payload": {
+      "main": [
+        [
+          {
+            "node": "Load item_config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load item_config": {
+      "main": [
+        [
+          {
+            "node": "Build Idempotency Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Idempotency Key": {
+      "main": [
+        [
+          {
+            "node": "Check Existing Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Invoice": {
+      "main": [
+        [
+          {
+            "node": "Already Invoiced?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already Invoiced?": {
+      "main": [
+        [
+          {
+            "node": "Exit Idempotent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Contact by Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Contact by Email": {
+      "main": [
+        [
+          {
+            "node": "Has Email Match?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Email Match?": {
+      "main": [
+        [
+          {
+            "node": "Contact Resolved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Contact by Phone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Contact by Phone": {
+      "main": [
+        [
+          {
+            "node": "Has Phone Match?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Phone Match?": {
+      "main": [
+        [
+          {
+            "node": "Contact Resolved",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Build Create-Contact Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Create-Contact Body": {
+      "main": [
+        [
+          {
+            "node": "Create Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Contact": {
+      "main": [
+        [
+          {
+            "node": "Contact Resolved",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Contact Resolved": {
+      "main": [
+        [
+          {
+            "node": "Resolve Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Contact": {
+      "main": [
+        [
+          {
+            "node": "Build Line Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Line Items": {
+      "main": [
+        [
+          {
+            "node": "Build Invoice Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Invoice Payload": {
+      "main": [
+        [
+          {
+            "node": "Create Draft Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Draft Invoice": {
+      "main": [
+        [
+          {
+            "node": "Write back to Source Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write back to Source Row": {
+      "main": [
+        [
+          {
+            "node": "Return Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "Bagnetchon \u2014 Notify (sub)"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {},
+  "versionId": "",
+  "tags": []
+}

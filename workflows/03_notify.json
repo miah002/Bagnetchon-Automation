@@ -1,0 +1,187 @@
+{
+  "name": "Bagnetchon \u2014 Notify (sub)",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "df6a913a-b0b4-4446-b2f8-f4499641cf69",
+      "name": "From Caller",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "/**\n * Notify sub-workflow \u2014 \"Format Message\" Code node\n * ----------------------------------------------------------------------------\n * Formats the incoming payload into a single human-readable message used\n * by both Slack and email channels.\n */\nconst p = $input.item.json;\nconst lines = [];\n\nlines.push(`*Bagnetchon automation alert*`);\nlines.push(`severity: ${p.severity ?? 'info'}`);\nlines.push(`stage:    ${p.stage ?? 'unknown'}`);\nlines.push(`source:   ${p.source ?? 'unknown'}`);\n\nif (Array.isArray(p.errors) && p.errors.length) {\n  lines.push('');\n  lines.push('errors:');\n  for (const e of p.errors) lines.push(`  - ${e}`);\n}\n\nif (p.row && typeof p.row === 'object') {\n  lines.push('');\n  lines.push('row:');\n  for (const [k, v] of Object.entries(p.row)) {\n    lines.push(`  ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`);\n  }\n}\n\nif (p.error_message) {\n  lines.push('');\n  lines.push(`error: ${p.error_message}`);\n}\n\nconst text = lines.join('\\n');\nconst subject = `[Bagnetchon] ${p.severity ?? 'info'} at ${p.stage ?? 'unknown'}`;\n\nreturn [{ json: { text, subject } }];\n"
+      },
+      "id": "aeb99ccf-1816-4c6f-96ca-ead438ad0803",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "6c95e4a2-4970-49f9-b677-a88f129e508a",
+                    "leftValue": "={{ $env.NOTIFY_CHANNEL }}",
+                    "rightValue": "slack",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "slack"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "15b4b876-6f7f-44f9-95ae-1189ca3ad6ab",
+                    "leftValue": "={{ $env.NOTIFY_CHANNEL }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "628dc8ac-7b43-4fe0-a327-645d0a692e68",
+      "name": "Choose Channel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NOTIFY_SLACK_WEBHOOK }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.text }) }}",
+        "options": {}
+      },
+      "id": "9fcce6df-e826-4d2c-9e53-2e5725da0ef2",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        200
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.NOTIFY_EMAIL_FROM }}",
+        "toEmail": "={{ $env.NOTIFY_EMAIL_TO }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.text }}",
+        "options": {}
+      },
+      "id": "34e706cb-17ce-45fc-bc24-a8c278dd8c1d",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "From Caller": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message": {
+      "main": [
+        [
+          {
+            "node": "Choose Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose Channel": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {},
+  "versionId": "",
+  "tags": []
+}
