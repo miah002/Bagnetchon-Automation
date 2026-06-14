@@ -384,20 +384,6 @@
     },
     {
       "parameters": {
-        "mode": "append",
-        "numberOfInputs": 3
-      },
-      "id": "9e346b77-c10e-4d56-9d89-1d9561f132f6",
-      "name": "Contact Resolved",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        2640,
-        420
-      ]
-    },
-    {
-      "parameters": {
         "language": "javaScript",
         "jsCode": "/**\n * Sub-workflow — \"Resolve Contact\" Code node\n * ----------------------------------------------------------------------------\n * Reads the outputs of the three preceding contact-resolution HTTP nodes\n * (Find by Email → Find by Phone → Create) and picks the contact_id from\n * whichever path succeeded. Only one of the three branches will have run\n * for any single execution; the others will be undefined.\n *\n * Output is the normalized order plus `contact_id` and `contact_lookup`\n * (\"matched_email\" | \"matched_phone\" | \"created\"), passed forward.\n */\nconst order = $('Validate Payload').item.json;\n\nlet contact_id = null;\nlet lookup = null;\n\n// Email-match branch\ntry {\n  const out = $('Find Contact by Email').item?.json;\n  if (out?.contacts?.length > 0) {\n    contact_id = out.contacts[0].contact_id;\n    lookup = 'matched_email';\n  }\n} catch (_) { /* branch didn't run */ }\n\n// Phone-match branch\nif (!contact_id) {\n  try {\n    const out = $('Find Contact by Phone').item?.json;\n    if (out?.contacts?.length > 0) {\n      contact_id = out.contacts[0].contact_id;\n      lookup = 'matched_phone';\n    }\n  } catch (_) { /* branch didn't run */ }\n}\n\n// Create branch\nif (!contact_id) {\n  try {\n    const out = $('Create Contact').item?.json;\n    contact_id = out?.contact?.contact_id || null;\n    if (contact_id) lookup = 'created';\n  } catch (_) { /* branch didn't run */ }\n}\n\nif (!contact_id) {\n  throw new Error('Could not resolve a Zoho contact_id (no match and no create result).');\n}\n\nreturn [{ json: { ...order, contact_id, contact_lookup: lookup } }];\n"
       },
@@ -679,7 +665,7 @@
       "main": [
         [
           {
-            "node": "Contact Resolved",
+            "node": "Resolve Contact",
             "type": "main",
             "index": 0
           }
@@ -708,9 +694,9 @@
       "main": [
         [
           {
-            "node": "Contact Resolved",
+            "node": "Resolve Contact",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ],
         [
@@ -734,17 +720,6 @@
       ]
     },
     "Create Contact": {
-      "main": [
-        [
-          {
-            "node": "Contact Resolved",
-            "type": "main",
-            "index": 2
-          }
-        ]
-      ]
-    },
-    "Contact Resolved": {
       "main": [
         [
           {
