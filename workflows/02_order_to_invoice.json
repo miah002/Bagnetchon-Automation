@@ -17,7 +17,7 @@
     {
       "parameters": {
         "language": "javaScript",
-        "jsCode": "const p = $input.item.json;\nconst errors = [];\n\nif (!p || typeof p !== 'object') errors.push('payload is missing');\nif (!p?.source) errors.push('source is missing');\nif (!p?.source_row_id) errors.push('source_row_id is missing');\nif (!p?.customer?.email && !p?.customer?.phone) {\n  errors.push('need at least email or phone for contact dedupe');\n}\nif (!p?.customer?.name) errors.push('customer name is missing');\nif (!Array.isArray(p?.selected_items) || p.selected_items.length === 0) {\n  errors.push('no menu items selected');\n}\n\nif (errors.length) throw new Error('Invalid order payload: ' + errors.join('; '));\nreturn [{ json: p }];"
+        "jsCode": "const p = $('From Caller').item.json;\nconst errors = [];\n\nif (!p || typeof p !== 'object') errors.push('payload is missing');\nif (!p?.source) errors.push('source is missing');\nif (!p?.source_row_id) errors.push('source_row_id is missing');\nif (!p?.customer?.email && !p?.customer?.phone) {\n  errors.push('need at least email or phone for contact dedupe');\n}\nif (!p?.customer?.name) errors.push('customer name is missing');\nif (!Array.isArray(p?.selected_items) || p.selected_items.length === 0) {\n  errors.push('no menu items selected');\n}\n\nif (errors.length) throw new Error('Invalid order payload: ' + errors.join('; '));\nreturn [{ json: p }];"
       },
       "id": "dc309a6a-f4a1-49ed-89bf-e5fbfff81826",
       "name": "Validate Payload",
@@ -84,11 +84,13 @@
       "parameters": {
         "method": "GET",
         "url": "={{ $vars.ZOHO_BASE_URL }}/invoices",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Zoho-oauthtoken {{ $('Zoho Auth').item.json.access_token }}"
+            },
             {
               "name": "X-com-zoho-invoice-organizationid",
               "value": "={{ $vars.ZOHO_ORG_ID }}"
@@ -174,11 +176,13 @@
       "parameters": {
         "method": "GET",
         "url": "={{ $vars.ZOHO_BASE_URL }}/contacts",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Zoho-oauthtoken {{ $('Zoho Auth').item.json.access_token }}"
+            },
             {
               "name": "X-com-zoho-invoice-organizationid",
               "value": "={{ $vars.ZOHO_ORG_ID }}"
@@ -248,11 +252,13 @@
       "parameters": {
         "method": "GET",
         "url": "={{ $vars.ZOHO_BASE_URL }}/contacts",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Zoho-oauthtoken {{ $('Zoho Auth').item.json.access_token }}"
+            },
             {
               "name": "X-com-zoho-invoice-organizationid",
               "value": "={{ $vars.ZOHO_ORG_ID }}"
@@ -336,11 +342,13 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $vars.ZOHO_BASE_URL }}/contacts",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Zoho-oauthtoken {{ $('Zoho Auth').item.json.access_token }}"
+            },
             {
               "name": "X-com-zoho-invoice-organizationid",
               "value": "={{ $vars.ZOHO_ORG_ID }}"
@@ -434,11 +442,13 @@
       "parameters": {
         "method": "POST",
         "url": "={{ $vars.ZOHO_BASE_URL }}/invoices",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Zoho-oauthtoken {{ $('Zoho Auth').item.json.access_token }}"
+            },
             {
               "name": "X-com-zoho-invoice-organizationid",
               "value": "={{ $vars.ZOHO_ORG_ID }}"
@@ -528,6 +538,42 @@
         3960,
         420
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.ZOHO_ACCOUNTS_URL }}/oauth/v2/token",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "refresh_token",
+              "value": "={{ $vars.ZOHO_REFRESH_TOKEN }}"
+            },
+            {
+              "name": "client_id",
+              "value": "={{ $vars.ZOHO_CLIENT_ID }}"
+            },
+            {
+              "name": "client_secret",
+              "value": "={{ $vars.ZOHO_CLIENT_SECRET }}"
+            },
+            {
+              "name": "grant_type",
+              "value": "refresh_token"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "zoho-auth-node-0001",
+      "name": "Zoho Auth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        120
+      ]
     }
   ],
   "connections": {
@@ -535,7 +581,7 @@
       "main": [
         [
           {
-            "node": "Validate Payload",
+            "node": "Zoho Auth",
             "type": "main",
             "index": 0
           }
@@ -744,6 +790,17 @@
         [
           {
             "node": "Return Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zoho Auth": {
+      "main": [
+        [
+          {
+            "node": "Validate Payload",
             "type": "main",
             "index": 0
           }

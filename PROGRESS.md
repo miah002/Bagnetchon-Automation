@@ -35,7 +35,16 @@
 
 ## Pending / Next Steps
 
-### 1. item_config tab in Google Sheet (BLOCKING)
+### 0. Zoho auth — SOLVED via self-refresh (no n8n Zoho credential)
+n8n's built-in Zoho credential is CRM-scoped (no Invoice scope) and generic
+OAuth2 sends `Bearer` while Zoho needs `Zoho-oauthtoken`. So instead:
+- Added **Zoho Auth** node (POST refresh_token → access_token) as first step
+  in sub-workflow, between From Caller and Validate Payload.
+- All 5 Zoho HTTP nodes now use header auth:
+  `Authorization: Zoho-oauthtoken {{ $('Zoho Auth').item.json.access_token }}`
+- Reuses ZOHO_CLIENT_ID/SECRET/REFRESH_TOKEN vars. No new Zoho app needed.
+
+### 1. item_config tab in Google Sheet (DONE)
 Add a new tab named exactly `item_config` to the spreadsheet.
 Columns (row 1 = headers):
 

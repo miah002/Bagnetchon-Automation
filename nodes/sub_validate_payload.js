@@ -1,4 +1,4 @@
-const p = $input.item.json;
+const p = $('From Caller').item.json;
 const errors = [];
 
 if (!p || typeof p !== 'object') errors.push('payload is missing');
