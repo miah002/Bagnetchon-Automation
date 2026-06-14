@@ -53,8 +53,9 @@ function parseCsv(text) {
 const configRows = parseCsv(fs.readFileSync(path.join(ROOT, 'item_config.csv'), 'utf8'));
 
 // --- mini n8n runtime ---
-function runNode(code, { inputItem = {}, nodes = {}, vars = {} } = {}) {
-  const $input = { item: { json: inputItem }, all: () => [{ json: inputItem }] };
+function runNode(code, { inputItem = {}, inputItems = null, nodes = {}, vars = {} } = {}) {
+  const items = inputItems || [inputItem];
+  const $input = { item: { json: items[0] }, all: () => items.map((j) => ({ json: j })) };
   const $ = (name) => {
     if (!(name in nodes)) throw new Error(`mock: node "${name}" did not run`);
     const arr = Array.isArray(nodes[name]) ? nodes[name] : [nodes[name]];
@@ -153,6 +154,25 @@ const notify = runNode(C.buildNotify, { inputItem: vrBad })[0].json;
 ok(notify.severity === 'error' && Array.isArray(notify.errors), 'notify payload built');
 const msg = runNode(C.formatMessage, { inputItem: notify })[0].json;
 ok(/Bagnetchon automation alert/.test(msg.text) && /email/i.test(msg.text), 'message formatted with errors');
+
+console.log('\n[9] Multi-row — two orders in one execution both processed');
+const rowB = {
+  ...validRow,
+  'Timestamp': '2026-06-14T07:11:37.000Z',
+  'Email Address': 'jeremiah.qryde@gmail.com',
+  'What is your name?': 'Test Miah',
+  'Contact number or mobile (for confirmation & follow-up)': 123456789,
+  [LECHON_HEADER]: 'Roasted Cochinillo 12 -15 lbs. $450',
+  'Column 17': '',
+  'Column 11': 'Shanghai Rolls- Full tray $180 in',
+};
+const vrMulti = runNode(C.validateRow, { inputItems: [validRow, rowB] });
+ok(vrMulti.length === 2, `Validate Row returns 2 items (got ${vrMulti.length})`);
+ok(vrMulti.every((x) => x.json.ok), 'both rows valid');
+const normMulti = runNode(C.normalize, { inputItems: [{ row: validRow }, { row: rowB }], vars: VARS });
+ok(normMulti.length === 2, `Normalize returns 2 orders (got ${normMulti.length})`);
+ok(normMulti[1].json.customer.name === 'Test Miah', 'second row (Test Miah) not dropped');
+ok(normMulti[0].json.source_row_id !== normMulti[1].json.source_row_id, 'distinct source_row_ids');
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
