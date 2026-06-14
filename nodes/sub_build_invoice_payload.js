@@ -1,29 +1,30 @@
 const order = $('Build Line Items').item.json;
 
-// Notes: combine the customer's special instructions with any uncatalogued
-// item review flags so the draft is loud about anything needing attention.
+// Event + guest context goes in notes (no spare custom-field slot: plan allows 3).
+const f = order.fulfillment || {};
+const ctx = [];
+if (f.event_type) ctx.push('Event: ' + f.event_type);
+if (f.guest_count) ctx.push('Guests: ' + f.guest_count);
+
 const notes = [
+  ctx.join(' | '),
   order.special_instructions || '',
-  ...(order.review || []).map(r => '[REVIEW: uncatalogued item — ' + r + ']'),
+  ...(order.review || []).map((r) => '[REVIEW: uncatalogued item — ' + r + ']'),
 ]
   .filter(Boolean)
   .join('\n')
   .trim();
 
-// Custom fields referenced by label. These MUST exist in:
-//   Zoho Invoice → Settings → Custom Fields → Invoices
-//   cf_source_row_id     (Single line)
-//   cf_fulfillment_date  (Date)
-//   cf_fulfillment_type  (Single line / Dropdown)
-//   cf_event_type        (Single line)
+// Only 3 custom fields (Zoho plan limit). These MUST exist in
+//   Zoho Invoice → Settings → Custom Fields → Invoices  (named exactly):
+//   cf_source_row_id     (Text, single line)  <- idempotency key
+//   cf_fulfillment_date  (Text, single line)
+//   cf_fulfillment_type  (Text, single line)
 const custom_fields = [
   { label: 'cf_source_row_id',    value: order.source_row_id },
-  { label: 'cf_fulfillment_date', value: order.fulfillment?.date || '' },
-  { label: 'cf_fulfillment_type', value: order.fulfillment?.type || '' },
+  { label: 'cf_fulfillment_date', value: f.date || '' },
+  { label: 'cf_fulfillment_type', value: f.type || '' },
 ];
-if (order.fulfillment?.event_type) {
-  custom_fields.push({ label: 'cf_event_type', value: order.fulfillment.event_type });
-}
 
 const payload = {
   customer_id: order.contact_id,
@@ -33,8 +34,8 @@ const payload = {
   custom_fields,
 };
 
-if (order.fulfillment?.address) {
-  payload.shipping_address = { address: order.fulfillment.address };
+if (f.address) {
+  payload.shipping_address = { address: f.address };
 }
 
 return [{ json: { ...order, invoice_payload: payload } }];
