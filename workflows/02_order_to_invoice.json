@@ -574,6 +574,20 @@
         420,
         120
       ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Load item_config emits one item PER config row (16 rows).\n// The order must continue as a SINGLE item or every downstream node\n// (incl. Create Contact / Create Draft Invoice) runs once per row.\n// Config rows stay available via $('Load item_config').all() in\n// Build Line Items, so we just collapse back to the single order here.\nreturn [{ json: $('Validate Payload').item.json }];"
+      },
+      "id": "single-order-node-0001",
+      "name": "Single Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        750,
+        300
+      ]
     }
   ],
   "connections": {
@@ -603,7 +617,7 @@
       "main": [
         [
           {
-            "node": "Build Idempotency Key",
+            "node": "Single Order",
             "type": "main",
             "index": 0
           }
@@ -801,6 +815,17 @@
         [
           {
             "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Single Order": {
+      "main": [
+        [
+          {
+            "node": "Build Idempotency Key",
             "type": "main",
             "index": 0
           }
