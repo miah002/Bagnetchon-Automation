@@ -35,12 +35,12 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $env.GS_SPREADSHEET_ID }}"
+          "value": "={{ $vars.GS_SPREADSHEET_ID }}"
         },
         "sheetName": {
           "__rl": true,
           "mode": "name",
-          "value": "={{ $env.GS_ITEM_CONFIG_SHEET }}"
+          "value": "={{ $vars.GS_ITEM_CONFIG_SHEET }}"
         },
         "options": {
           "returnFirstMatch": false
@@ -83,7 +83,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.ZOHO_BASE_URL }}/invoices",
+        "url": "={{ $vars.ZOHO_BASE_URL }}/invoices",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
@@ -91,7 +91,7 @@
           "parameters": [
             {
               "name": "X-com-zoho-invoice-organizationid",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             }
           ]
         },
@@ -101,7 +101,7 @@
           "parameters": [
             {
               "name": "organization_id",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             },
             {
               "name": "cf_source_row_id",
@@ -173,7 +173,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.ZOHO_BASE_URL }}/contacts",
+        "url": "={{ $vars.ZOHO_BASE_URL }}/contacts",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
@@ -181,7 +181,7 @@
           "parameters": [
             {
               "name": "X-com-zoho-invoice-organizationid",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             }
           ]
         },
@@ -191,7 +191,7 @@
           "parameters": [
             {
               "name": "organization_id",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             },
             {
               "name": "email_contains",
@@ -247,7 +247,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.ZOHO_BASE_URL }}/contacts",
+        "url": "={{ $vars.ZOHO_BASE_URL }}/contacts",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
@@ -255,7 +255,7 @@
           "parameters": [
             {
               "name": "X-com-zoho-invoice-organizationid",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             }
           ]
         },
@@ -265,7 +265,7 @@
           "parameters": [
             {
               "name": "organization_id",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             },
             {
               "name": "phone_contains",
@@ -335,7 +335,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ZOHO_BASE_URL }}/contacts",
+        "url": "={{ $vars.ZOHO_BASE_URL }}/contacts",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
@@ -343,7 +343,7 @@
           "parameters": [
             {
               "name": "X-com-zoho-invoice-organizationid",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             }
           ]
         },
@@ -353,7 +353,7 @@
           "parameters": [
             {
               "name": "organization_id",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             }
           ]
         },
@@ -433,7 +433,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ZOHO_BASE_URL }}/invoices",
+        "url": "={{ $vars.ZOHO_BASE_URL }}/invoices",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "zohoOAuth2Api",
         "sendHeaders": true,
@@ -441,7 +441,7 @@
           "parameters": [
             {
               "name": "X-com-zoho-invoice-organizationid",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             }
           ]
         },
@@ -451,7 +451,7 @@
           "parameters": [
             {
               "name": "organization_id",
-              "value": "={{ $env.ZOHO_ORG_ID }}"
+              "value": "={{ $vars.ZOHO_ORG_ID }}"
             }
           ]
         },
@@ -482,12 +482,12 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $env.GS_SPREADSHEET_ID }}"
+          "value": "={{ $vars.GS_SPREADSHEET_ID }}"
         },
         "sheetName": {
           "__rl": true,
           "mode": "name",
-          "value": "={{ $env.GS_RESPONSES_SHEET }}"
+          "value": "={{ $vars.GS_RESPONSES_SHEET }}"
         },
         "columns": {
           "mappingMode": "defineBelow",

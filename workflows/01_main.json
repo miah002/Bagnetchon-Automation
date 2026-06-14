@@ -1,5 +1,5 @@
 {
-  "name": "Bagnetchon \u2014 Sheet Intake (main)",
+  "name": "Bagnetchon — Sheet Intake (main)",
   "nodes": [
     {
       "parameters": {
@@ -14,12 +14,12 @@
         "documentId": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $env.GS_SPREADSHEET_ID }}"
+          "value": "={{ $vars.GS_SPREADSHEET_ID }}"
         },
         "sheetName": {
           "__rl": true,
           "mode": "name",
-          "value": "={{ $env.GS_RESPONSES_SHEET }}"
+          "value": "={{ $vars.GS_RESPONSES_SHEET }}"
         },
         "event": "rowAdded",
         "options": {}
@@ -36,7 +36,7 @@
     {
       "parameters": {
         "language": "javaScript",
-        "jsCode": "/**\n * Main workflow \u2014 \"Validate Row\" Code node\n * ----------------------------------------------------------------------------\n * Input  : one item from the Google Sheets Trigger (one new Form response row).\n *          The row's keys are exactly the column headers from row 1 of the sheet.\n * Output : { ok: boolean, row: <original>, errors: string[] }\n *\n * Checks:\n *   1. Email is present and shaped like an email address.\n *   2. Name is present.\n *   3. Fulfillment Date is present and parseable.\n *   4. Fulfillment Type is \"Pickup\" or \"Delivery\".\n *   5. If Delivery, Delivery Address is non-empty.\n *   6. At least one SKU quantity column is > 0.\n *\n * IMPORTANT: This Code node does NOT hard-code the SKU column names.\n * Everything that is not in the META set below is treated as a candidate\n * SKU column. To add a menu item to the Form, you add a column to the sheet\n * AND a row to `item_config` \u2014 you do NOT edit this Code node.\n */\nconst row = $input.item.json;\nconst errors = [];\n\nconst email = String(row['Email'] ?? row['Email Address'] ?? '').trim();\nif (!email) {\n  errors.push('email is missing');\n} else if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) {\n  errors.push('email format looks wrong');\n}\n\nconst name = String(row['Name'] ?? '').trim();\nif (!name) errors.push('name is missing');\n\nconst fulfillmentDate = String(row['Fulfillment Date'] ?? '').trim();\nif (!fulfillmentDate) {\n  errors.push('fulfillment date is missing');\n} else if (Number.isNaN(Date.parse(fulfillmentDate))) {\n  errors.push('fulfillment date is not a valid date');\n}\n\nconst fulfillmentType = String(row['Fulfillment Type'] ?? '').trim();\nif (!['Pickup', 'Delivery'].includes(fulfillmentType)) {\n  errors.push('fulfillment type must be \"Pickup\" or \"Delivery\"');\n}\n\nconst address = String(row['Delivery Address'] ?? '').trim();\nif (fulfillmentType === 'Delivery' && !address) {\n  errors.push('delivery address is required for Delivery orders');\n}\n\n// META = column headers we treat as customer / order metadata, NOT SKU quantities.\n// Adding a new SKU column to the sheet does not require editing this set.\nconst META = new Set([\n  'Timestamp',\n  'Email', 'Email Address',\n  'Name',\n  'Contact Number', 'Phone',\n  'Fulfillment Date',\n  'Fulfillment Type',\n  'Delivery Address',\n  'Payment Method',\n  'Special Instructions',\n  'row_number',                    // injected by the Google Sheets Trigger\n  'Invoice ID', 'Sync Status',     // write-back columns (round-tripped after sync)\n]);\n\nlet totalQty = 0;\nfor (const [k, v] of Object.entries(row)) {\n  if (META.has(k)) continue;\n  const n = Number(v);\n  if (Number.isFinite(n) && n > 0) totalQty += n;\n}\nif (totalQty <= 0) errors.push('no item quantities greater than zero');\n\nreturn [{ json: { ok: errors.length === 0, row, errors } }];\n"
+        "jsCode": "/**\n * Main workflow — \"Validate Row\" Code node\n * ----------------------------------------------------------------------------\n * Input  : one item from the Google Sheets Trigger (one new Form response row).\n *          The row's keys are exactly the column headers from row 1 of the sheet.\n * Output : { ok: boolean, row: <original>, errors: string[] }\n *\n * Checks:\n *   1. Email is present and shaped like an email address.\n *   2. Name is present.\n *   3. Fulfillment Date is present and parseable.\n *   4. Fulfillment Type is \"Pickup\" or \"Delivery\".\n *   5. If Delivery, Delivery Address is non-empty.\n *   6. At least one SKU quantity column is > 0.\n *\n * IMPORTANT: This Code node does NOT hard-code the SKU column names.\n * Everything that is not in the META set below is treated as a candidate\n * SKU column. To add a menu item to the Form, you add a column to the sheet\n * AND a row to `item_config` — you do NOT edit this Code node.\n */\nconst row = $input.item.json;\nconst errors = [];\n\nconst email = String(row['Email'] ?? row['Email Address'] ?? '').trim();\nif (!email) {\n  errors.push('email is missing');\n} else if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) {\n  errors.push('email format looks wrong');\n}\n\nconst name = String(row['Name'] ?? '').trim();\nif (!name) errors.push('name is missing');\n\nconst fulfillmentDate = String(row['Fulfillment Date'] ?? '').trim();\nif (!fulfillmentDate) {\n  errors.push('fulfillment date is missing');\n} else if (Number.isNaN(Date.parse(fulfillmentDate))) {\n  errors.push('fulfillment date is not a valid date');\n}\n\nconst fulfillmentType = String(row['Fulfillment Type'] ?? '').trim();\nif (!['Pickup', 'Delivery'].includes(fulfillmentType)) {\n  errors.push('fulfillment type must be \"Pickup\" or \"Delivery\"');\n}\n\nconst address = String(row['Delivery Address'] ?? '').trim();\nif (fulfillmentType === 'Delivery' && !address) {\n  errors.push('delivery address is required for Delivery orders');\n}\n\n// META = column headers we treat as customer / order metadata, NOT SKU quantities.\n// Adding a new SKU column to the sheet does not require editing this set.\nconst META = new Set([\n  'Timestamp',\n  'Email', 'Email Address',\n  'Name',\n  'Contact Number', 'Phone',\n  'Fulfillment Date',\n  'Fulfillment Type',\n  'Delivery Address',\n  'Payment Method',\n  'Special Instructions',\n  'row_number',                    // injected by the Google Sheets Trigger\n  'Invoice ID', 'Sync Status',     // write-back columns (round-tripped after sync)\n]);\n\nlet totalQty = 0;\nfor (const [k, v] of Object.entries(row)) {\n  if (META.has(k)) continue;\n  const n = Number(v);\n  if (Number.isFinite(n) && n > 0) totalQty += n;\n}\nif (totalQty <= 0) errors.push('no item quantities greater than zero');\n\nreturn [{ json: { ok: errors.length === 0, row, errors } }];\n"
       },
       "id": "f49263cb-d5cf-4579-91dc-e07d08fe1cf8",
       "name": "Validate Row",
@@ -82,7 +82,7 @@
     {
       "parameters": {
         "language": "javaScript",
-        "jsCode": "/**\n * Main workflow \u2014 \"Normalize Order\" Code node\n * ----------------------------------------------------------------------------\n * Converts the validated sheet row into the NORMALIZED ORDER payload that\n * the \"Order \u2192 Invoice\" sub-workflow accepts. This is the boundary contract\n * shared between the Google Sheet intake (today) and the future Supabase\n * form intake \u2014 both produce this same shape.\n *\n * Normalized order shape:\n * {\n *   source: 'google_sheet' | 'supabase_form',\n *   source_row_id: '<source-prefix>:<stable-id>',\n *   customer: { email, name, phone },\n *   fulfillment: { date, type, address },\n *   payment_method, special_instructions,\n *   item_quantities: { '<sheet_column_header>': <number> },\n *   writeback: { kind, ...intake-specific }\n * }\n */\nconst crypto = require('crypto');\nconst row = $input.item.json.row;\n\nconst email = String(row['Email'] ?? row['Email Address'] ?? '').trim().toLowerCase();\nconst timestamp = String(row['Timestamp'] ?? '').trim();\n\n// Stable id: hash of (timestamp + email). Survives row reorders / re-runs.\nconst idHash = crypto\n  .createHash('sha256')\n  .update(timestamp + '|' + email)\n  .digest('hex')\n  .slice(0, 16);\n\nconst META = new Set([\n  'Timestamp',\n  'Email', 'Email Address',\n  'Name',\n  'Contact Number', 'Phone',\n  'Fulfillment Date',\n  'Fulfillment Type',\n  'Delivery Address',\n  'Payment Method',\n  'Special Instructions',\n  'row_number',\n  'Invoice ID', 'Sync Status',\n]);\n\nconst item_quantities = {};\nfor (const [k, v] of Object.entries(row)) {\n  if (META.has(k)) continue;\n  const n = Number(v);\n  if (Number.isFinite(n) && n > 0) item_quantities[k] = n;\n}\n\nconst address = String(row['Delivery Address'] ?? '').trim();\n\nconst payload = {\n  source: 'google_sheet',\n  source_row_id: `gs:${idHash}`,\n  customer: {\n    email,\n    name: String(row['Name'] ?? '').trim(),\n    phone: String(row['Contact Number'] ?? row['Phone'] ?? '').trim(),\n  },\n  fulfillment: {\n    date: String(row['Fulfillment Date'] ?? '').trim(),\n    type: String(row['Fulfillment Type'] ?? '').trim(),\n    address: address || null,\n  },\n  payment_method: String(row['Payment Method'] ?? '').trim(),\n  special_instructions: String(row['Special Instructions'] ?? '').trim(),\n  item_quantities,\n  writeback: {\n    kind: 'google_sheet',\n    spreadsheet_id: $env.GS_SPREADSHEET_ID,\n    sheet_name: $env.GS_RESPONSES_SHEET,\n    row_number: row.row_number ?? null,\n  },\n};\n\nreturn [{ json: payload }];\n"
+        "jsCode": "/**\n * Main workflow — \"Normalize Order\" Code node\n * ----------------------------------------------------------------------------\n * Converts the validated sheet row into the NORMALIZED ORDER payload that\n * the \"Order → Invoice\" sub-workflow accepts. This is the boundary contract\n * shared between the Google Sheet intake (today) and the future Supabase\n * form intake — both produce this same shape.\n *\n * Normalized order shape:\n * {\n *   source: 'google_sheet' | 'supabase_form',\n *   source_row_id: '<source-prefix>:<stable-id>',\n *   customer: { email, name, phone },\n *   fulfillment: { date, type, address },\n *   payment_method, special_instructions,\n *   item_quantities: { '<sheet_column_header>': <number> },\n *   writeback: { kind, ...intake-specific }\n * }\n */\nconst crypto = require('crypto');\nconst row = $input.item.json.row;\n\nconst email = String(row['Email'] ?? row['Email Address'] ?? '').trim().toLowerCase();\nconst timestamp = String(row['Timestamp'] ?? '').trim();\n\n// Stable id: hash of (timestamp + email). Survives row reorders / re-runs.\nconst idHash = crypto\n  .createHash('sha256')\n  .update(timestamp + '|' + email)\n  .digest('hex')\n  .slice(0, 16);\n\nconst META = new Set([\n  'Timestamp',\n  'Email', 'Email Address',\n  'Name',\n  'Contact Number', 'Phone',\n  'Fulfillment Date',\n  'Fulfillment Type',\n  'Delivery Address',\n  'Payment Method',\n  'Special Instructions',\n  'row_number',\n  'Invoice ID', 'Sync Status',\n]);\n\nconst item_quantities = {};\nfor (const [k, v] of Object.entries(row)) {\n  if (META.has(k)) continue;\n  const n = Number(v);\n  if (Number.isFinite(n) && n > 0) item_quantities[k] = n;\n}\n\nconst address = String(row['Delivery Address'] ?? '').trim();\n\nconst payload = {\n  source: 'google_sheet',\n  source_row_id: `gs:${idHash}`,\n  customer: {\n    email,\n    name: String(row['Name'] ?? '').trim(),\n    phone: String(row['Contact Number'] ?? row['Phone'] ?? '').trim(),\n  },\n  fulfillment: {\n    date: String(row['Fulfillment Date'] ?? '').trim(),\n    type: String(row['Fulfillment Type'] ?? '').trim(),\n    address: address || null,\n  },\n  payment_method: String(row['Payment Method'] ?? '').trim(),\n  special_instructions: String(row['Special Instructions'] ?? '').trim(),\n  item_quantities,\n  writeback: {\n    kind: 'google_sheet',\n    spreadsheet_id: $vars.GS_SPREADSHEET_ID,\n    sheet_name: $vars.GS_RESPONSES_SHEET,\n    row_number: row.row_number ?? null,\n  },\n};\n\nreturn [{ json: payload }];\n"
       },
       "id": "60d7291f-f26b-4dee-9c15-d4ffa5f54756",
       "name": "Normalize Order",
@@ -99,14 +99,14 @@
         "workflowId": {
           "__rl": true,
           "mode": "list",
-          "value": "",
-          "cachedResultName": "Bagnetchon \u2014 Order to Invoice (sub)"
+          "value": "3mhDUwqqkQKG2sXE",
+          "cachedResultName": "Bagnetchon — Order to Invoice (sub)"
         },
         "mode": "each",
         "options": {}
       },
       "id": "7248548c-c0b5-4af0-8eec-15299cd2380c",
-      "name": "Call: Order \u2192 Invoice",
+      "name": "Call: Order → Invoice",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -117,7 +117,7 @@
     {
       "parameters": {
         "language": "javaScript",
-        "jsCode": "/**\n * Main workflow \u2014 \"Build Notify Payload\" Code node (validation-failure path)\n * ----------------------------------------------------------------------------\n * When \"Validate Row\" finds problems, we hand the Notify sub-workflow a\n * compact, channel-agnostic payload. The Notify workflow decides whether\n * to format it as Slack text or email body.\n */\nconst v = $input.item.json;\nreturn [{\n  json: {\n    severity: 'error',\n    stage: 'sheet-intake-validation',\n    source: 'google_sheet',\n    errors: v.errors || ['unknown validation failure'],\n    row: v.row,\n  },\n}];\n"
+        "jsCode": "/**\n * Main workflow — \"Build Notify Payload\" Code node (validation-failure path)\n * ----------------------------------------------------------------------------\n * When \"Validate Row\" finds problems, we hand the Notify sub-workflow a\n * compact, channel-agnostic payload. The Notify workflow decides whether\n * to format it as Slack text or email body.\n */\nconst v = $input.item.json;\nreturn [{\n  json: {\n    severity: 'error',\n    stage: 'sheet-intake-validation',\n    source: 'google_sheet',\n    errors: v.errors || ['unknown validation failure'],\n    row: v.row,\n  },\n}];\n"
       },
       "id": "4ade6188-92f9-4de0-8b8c-7cde6b46aa2f",
       "name": "Build Notify Payload",
@@ -134,8 +134,8 @@
         "workflowId": {
           "__rl": true,
           "mode": "list",
-          "value": "",
-          "cachedResultName": "Bagnetchon \u2014 Notify (sub)"
+          "value": "OwMpoe36X7rPNj8l",
+          "cachedResultName": "Bagnetchon — Notify (sub)"
         },
         "mode": "each",
         "options": {}
@@ -195,7 +195,7 @@
       "main": [
         [
           {
-            "node": "Call: Order \u2192 Invoice",
+            "node": "Call: Order → Invoice",
             "type": "main",
             "index": 0
           }

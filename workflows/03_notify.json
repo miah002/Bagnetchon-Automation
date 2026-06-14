@@ -41,7 +41,7 @@
                 "conditions": [
                   {
                     "id": "6c95e4a2-4970-49f9-b677-a88f129e508a",
-                    "leftValue": "={{ $env.NOTIFY_CHANNEL }}",
+                    "leftValue": "={{ $vars.NOTIFY_CHANNEL }}",
                     "rightValue": "slack",
                     "operator": {
                       "type": "string",
@@ -63,7 +63,7 @@
                 "conditions": [
                   {
                     "id": "15b4b876-6f7f-44f9-95ae-1189ca3ad6ab",
-                    "leftValue": "={{ $env.NOTIFY_CHANNEL }}",
+                    "leftValue": "={{ $vars.NOTIFY_CHANNEL }}",
                     "rightValue": "email",
                     "operator": {
                       "type": "string",
@@ -94,7 +94,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.NOTIFY_SLACK_WEBHOOK }}",
+        "url": "={{ $vars.NOTIFY_SLACK_WEBHOOK }}",
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
@@ -115,8 +115,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.NOTIFY_EMAIL_FROM }}",
-        "toEmail": "={{ $env.NOTIFY_EMAIL_TO }}",
+        "fromEmail": "={{ $vars.NOTIFY_EMAIL_FROM }}",
+        "toEmail": "={{ $vars.NOTIFY_EMAIL_TO }}",
         "subject": "={{ $json.subject }}",
         "text": "={{ $json.text }}",
         "options": {}
