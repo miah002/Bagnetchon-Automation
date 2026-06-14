@@ -1,30 +1,33 @@
 const order = $('Resolve Contact').item.json;
-const cfgRows = $('Load item_config').all().map(i => i.json);
+const cfgRows = $('Load item_config').all().map((i) => i.json);
 
-const normalize = s => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+// Collapse all whitespace (incl. newlines, double spaces) and lowercase, so
+// "Roasted  Lechon ..." matches "Roasted Lechon ..." and the multi-line
+// lechon column header is irrelevant to matching.
+const normalize = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 
-const active = cfgRows.filter(r => String(r.active ?? '').trim().toLowerCase() === 'true');
+const active = cfgRows.filter((r) => String(r.active ?? '').trim().toLowerCase() === 'true');
+
+// Match on match_text ONLY — each menu option label is unique, and the
+// sheet_column_header (especially the multi-line lechon one) is too fragile
+// to require an exact match on.
+const byText = new Map();
+for (const r of active) byText.set(normalize(r.match_text), r);
 
 const line_items = [];
 const review = [];
 
 for (const sel of order.selected_items) {
-  const colHeader = String(sel.sheet_column_header ?? '').trim();
-  const selNorm = normalize(sel.selected_text);
-
-  const row = active.find(r =>
-    normalize(r.sheet_column_header) === normalize(colHeader) &&
-    normalize(r.match_text) === selNorm
-  );
+  const row = byText.get(normalize(sel.selected_text));
 
   if (!row) {
-    const itemName = sel.selected_text || colHeader;
+    const itemName = sel.selected_text || sel.sheet_column_header;
     review.push('no item_config match for "' + itemName + '"');
     line_items.push({
       name: itemName,
       rate: 0,
       quantity: 1,
-      description: 'AD-HOC: no item_config row matched this selection',
+      description: 'AD-HOC: no item_config match_text matched this selection',
     });
     continue;
   }
