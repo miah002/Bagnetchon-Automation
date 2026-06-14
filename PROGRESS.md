@@ -44,6 +44,39 @@ OAuth2 sends `Bearer` while Zoho needs `Zoho-oauthtoken`. So instead:
   `Authorization: Zoho-oauthtoken {{ $('Zoho Auth').item.json.access_token }}`
 - Reuses ZOHO_CLIENT_ID/SECRET/REFRESH_TOKEN vars. No new Zoho app needed.
 
+## STATUS as of last session (2026-06-14 evening)
+
+END-TO-END WORKS. A real draft invoice (INV-000001) was created in Zoho from
+a form row — contacts, line items, rates, notes, custom fields all correct.
+
+Bugs found & fixed live this session (all pushed):
+- $env→$vars; checkbox-form redesign; Zoho auth header; item_config fan-out
+  (16x duplicate runs); main Code nodes dropping all-but-first row; Contact
+  Resolved merge blocking the create-contact path; item matching switched to
+  match_text-only (multi-line lechon header was too fragile).
+- Invoice custom_fields trimmed to 3 (Zoho plan limit); event/guests in notes.
+- Pulled all 16 Zoho item_ids via API, filled item_config.csv.
+
+### WHERE YOU LEFT OFF — do next:
+1. **Paste the 16 item_ids into the Google Sheet item_config tab as TEXT.**
+   Google Sheets rounds 18-digit ids if stored as numbers. Select column D →
+   Format → Number → Plain text → paste ids (see item_config.csv for values).
+   Verify D2 shows full 245500000000102576 left-aligned.
+2. Run a test → line items should use item_id, review empty, no [REVIEW] notes,
+   prices from Zoho catalog.
+3. Delete duplicate Jeremiah/Test contacts in Zoho (from rapid testing / index lag).
+4. (Production) Add `Invoice ID` + `Sync Status` columns to Form Responses 3,
+   activate the main workflow, then enable Write back to Source Row node.
+   row_number only populates on live trigger (not manual Fetch Test Event).
+5. Verify idempotency: re-run same row → should hit Exit Idempotent, no 2nd invoice.
+
+### Known notes:
+- CURRENCY: Zoho org is PHP. Once item_ids are set, invoices use Zoho catalog
+  prices (PHP). default_rate only used as ad-hoc fallback.
+- Dedup relies on Zoho contact search, which lags for freshly-created contacts.
+  Fine in production (orders spaced out); rapid testing creates duplicates.
+- Reference import CSVs are in `Import files/` and `zoho_items_import.csv`.
+
 ## Verified by local tests (2026-06-14, while you slept)
 
 Ran `node tests/node-logic.test.js` — **25/25 pass**. This runs the REAL
