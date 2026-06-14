@@ -3,48 +3,15 @@
   "nodes": [
     {
       "parameters": {
-        "authentication": "oAuth2",
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyMinute"
-            }
-          ]
-        },
-        "documentId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $vars.GS_SPREADSHEET_ID }}"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "={{ $vars.GS_RESPONSES_SHEET }}"
-        },
-        "event": "rowAdded",
-        "options": {}
-      },
-      "id": "ad78e96d-38f6-498f-9050-cf39fa4e8277",
-      "name": "Form Responses (Sheet)",
-      "type": "n8n-nodes-base.googleSheetsTrigger",
-      "typeVersion": 1,
-      "position": [
-        240,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "language": "javaScript",
         "jsCode": "const row = $input.item.json;\nconst errors = [];\n\nconst email = String(row['Email Address'] ?? '').trim();\nif (!email) {\n  errors.push('email is missing');\n} else if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) {\n  errors.push('email format looks wrong');\n}\n\nconst name = String(row['What is your name?'] ?? '').trim();\nif (!name) errors.push('name is missing');\n\nconst fulfillmentDate = String(row['What date, day and time do you need the food/service?'] ?? '').trim();\nif (!fulfillmentDate) errors.push('fulfillment date is missing');\n\nconst serviceMethod = String(row['Service Method '] ?? row['Service Method'] ?? '').trim();\nif (!serviceMethod) errors.push('service method is missing');\n\nif (serviceMethod.toLowerCase().includes('delivery')) {\n  const deliveryLocation = String(row['Delivery location '] ?? row['Delivery location'] ?? '').trim();\n  if (!deliveryLocation) errors.push('delivery location is required for Delivery orders');\n}\n\nconst META = new Set([\n  'Timestamp', 'Email Address', 'What is your name?',\n  'What date, day and time do you need the food/service?',\n  'Contact number or mobile (for confirmation & follow-up)',\n  'What type of event are you planning?', 'Estimated number of guests attending:',\n  'Service Method ', 'Service Method', 'Delivery location ', 'Delivery location',\n  '\"On which social media platform was the advertisement seen?\"',\n  'row_number', 'Invoice ID', 'Sync Status',\n]);\n\nlet hasSelection = false;\nfor (const [k, v] of Object.entries(row)) {\n  if (META.has(k)) continue;\n  if (k.startsWith('Bagnetchon ORDER, PAYMENT')) continue;\n  if (v && String(v).trim()) { hasSelection = true; break; }\n}\nif (!hasSelection) errors.push('no menu items selected');\n\nreturn [{ json: { ok: errors.length === 0, row, errors } }];"
       },
-      "id": "f49263cb-d5cf-4579-91dc-e07d08fe1cf8",
+      "id": "42803a9f-53a6-462b-b668-a509c8661f17",
       "name": "Validate Row",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        460,
-        300
+        544,
+        480
       ]
     },
     {
@@ -53,7 +20,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose"
+            "typeValidation": "loose",
+            "version": 1
           },
           "conditions": [
             {
@@ -70,67 +38,72 @@
         },
         "options": {}
       },
-      "id": "fcd4cb3e-ab49-4308-9eb6-b5897323c8cc",
+      "id": "14a83d5a-ce5b-46b5-b00b-ea76de3a0fde",
       "name": "Valid?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        680,
-        300
+        768,
+        480
       ]
     },
     {
       "parameters": {
-        "language": "javaScript",
         "jsCode": "const crypto = require('crypto');\nconst row = $input.item.json.row;\n\nconst email = String(row['Email Address'] ?? '').trim().toLowerCase();\nconst timestamp = String(row['Timestamp'] ?? '').trim();\n\nconst idHash = crypto\n  .createHash('sha256')\n  .update(timestamp + '|' + email)\n  .digest('hex')\n  .slice(0, 16);\n\nconst META = new Set([\n  'Timestamp', 'Email Address', 'What is your name?',\n  'What date, day and time do you need the food/service?',\n  'Contact number or mobile (for confirmation & follow-up)',\n  'What type of event are you planning?', 'Estimated number of guests attending:',\n  'Service Method ', 'Service Method', 'Delivery location ', 'Delivery location',\n  '\"On which social media platform was the advertisement seen?\"',\n  'row_number', 'Invoice ID', 'Sync Status',\n]);\n\nconst LECHON_COL = 'Bagnetchon Signature Menu --\\nHome of Premium Filipino Roasted Lechon';\n\nconst selected_items = [];\nfor (const [k, v] of Object.entries(row)) {\n  if (META.has(k)) continue;\n  if (k.startsWith('Bagnetchon ORDER, PAYMENT')) continue;\n  if (!v || !String(v).trim()) continue;\n  const text = String(v).trim();\n  if (k === LECHON_COL || k.startsWith('Bagnetchon Signature Menu')) {\n    // Multi-select: comma-separated\n    for (const part of text.split(/,\\s+/).map(s => s.trim()).filter(Boolean)) {\n      selected_items.push({ sheet_column_header: k, selected_text: part });\n    }\n  } else {\n    selected_items.push({ sheet_column_header: k, selected_text: text });\n  }\n}\n\nconst serviceMethod = String(row['Service Method '] ?? row['Service Method'] ?? '').trim();\nconst deliveryLocation = String(row['Delivery location '] ?? row['Delivery location'] ?? '').trim();\n\nreturn [{ json: {\n  source: 'google_sheet',\n  source_row_id: 'gs:' + idHash,\n  customer: {\n    email,\n    name: String(row['What is your name?'] ?? '').trim(),\n    phone: String(row['Contact number or mobile (for confirmation & follow-up)'] ?? '').trim(),\n  },\n  fulfillment: {\n    date: String(row['What date, day and time do you need the food/service?'] ?? '').trim(),\n    type: serviceMethod,\n    address: deliveryLocation || null,\n    event_type: String(row['What type of event are you planning?'] ?? '').trim(),\n    guest_count: row['Estimated number of guests attending:'] ?? null,\n  },\n  selected_items,\n  writeback: {\n    kind: 'google_sheet',\n    spreadsheet_id: $vars.GS_SPREADSHEET_ID,\n    sheet_name: $vars.GS_RESPONSES_SHEET,\n    row_number: row.row_number ?? null,\n  },\n}}];"
       },
-      "id": "60d7291f-f26b-4dee-9c15-d4ffa5f54756",
+      "id": "e0abf50c-e860-455f-b521-f9bd75a3dbb7",
       "name": "Normalize Order",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
-        200
+        976,
+        368
       ]
     },
     {
       "parameters": {
-        "source": "database",
         "workflowId": {
           "__rl": true,
-          "mode": "list",
           "value": "3mhDUwqqkQKG2sXE",
-          "cachedResultName": "Bagnetchon — Order to Invoice (sub)"
+          "mode": "list",
+          "cachedResultUrl": "/workflow/3mhDUwqqkQKG2sXE",
+          "cachedResultName": "Bagnetchon Automation — Bagnetchon — Order to Invoice (sub)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
         },
         "mode": "each",
         "options": {}
       },
-      "id": "7248548c-c0b5-4af0-8eec-15299cd2380c",
+      "id": "d5cb922e-e8cd-4c0f-9155-51395005f410",
       "name": "Call: Order → Invoice",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1140,
-        200
+        1216,
+        368
       ]
     },
     {
       "parameters": {
-        "language": "javaScript",
         "jsCode": "/**\n * Main workflow — \"Build Notify Payload\" Code node (validation-failure path)\n * ----------------------------------------------------------------------------\n * When \"Validate Row\" finds problems, we hand the Notify sub-workflow a\n * compact, channel-agnostic payload. The Notify workflow decides whether\n * to format it as Slack text or email body.\n */\nconst v = $input.item.json;\nreturn [{\n  json: {\n    severity: 'error',\n    stage: 'sheet-intake-validation',\n    source: 'google_sheet',\n    errors: v.errors || ['unknown validation failure'],\n    row: v.row,\n  },\n}];\n"
       },
-      "id": "4ade6188-92f9-4de0-8b8c-7cde6b46aa2f",
+      "id": "86cbb42a-7bbf-44ad-8b10-ec4d88163c4d",
       "name": "Build Notify Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
-        420
+        976,
+        592
       ]
     },
     {
       "parameters": {
-        "source": "database",
         "workflowId": {
           "__rl": true,
           "mode": "list",
@@ -140,28 +113,59 @@
         "mode": "each",
         "options": {}
       },
-      "id": "08c3bc7e-64db-423f-a4f5-42efc8d286f8",
+      "id": "e91c6961-cea8-41bd-864e-e8bb5263664a",
       "name": "Call: Notify (validation failure)",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1140,
-        420
-      ]
-    }
-  ],
-  "connections": {
-    "Form Responses (Sheet)": {
-      "main": [
-        [
-          {
-            "node": "Validate Row",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        1216,
+        592
       ]
     },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "10K7AyrIuwVTF-6OLqaK8I5K57kl-hJYZkU_FAD53cfU",
+          "mode": "list",
+          "cachedResultName": "Copy of BOF Bagnetchon Order Form (Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10K7AyrIuwVTF-6OLqaK8I5K57kl-hJYZkU_FAD53cfU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 870515642,
+          "mode": "list",
+          "cachedResultName": "Form Responses 3",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10K7AyrIuwVTF-6OLqaK8I5K57kl-hJYZkU_FAD53cfU/edit#gid=870515642"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        304,
+        480
+      ],
+      "id": "c6a11aca-a01f-481d-b58a-27f65a63a408",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "slDRb01LaIygc3Pv",
+          "name": "Google Sheets Trigger OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
     "Validate Row": {
       "main": [
         [
@@ -212,17 +216,31 @@
           }
         ]
       ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
   },
-  "staticData": null,
+  "versionId": "e172d8fc-2b77-4579-a59d-4249b5ab4043",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9f157bd02e258c429f43a9ab666c03431f4111425cbe94e040fd9212526b3dff"
   },
-  "pinData": {},
-  "versionId": "",
+  "nodeGroups": [],
+  "id": "h7yS9QcuwDXOX119",
   "tags": []
 }
