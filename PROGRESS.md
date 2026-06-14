@@ -44,49 +44,94 @@ OAuth2 sends `Bearer` while Zoho needs `Zoho-oauthtoken`. So instead:
   `Authorization: Zoho-oauthtoken {{ $('Zoho Auth').item.json.access_token }}`
 - Reuses ZOHO_CLIENT_ID/SECRET/REFRESH_TOKEN vars. No new Zoho app needed.
 
-### 1. item_config tab in Google Sheet (DONE)
-Add a new tab named exactly `item_config` to the spreadsheet.
-Columns (row 1 = headers):
+## Verified by local tests (2026-06-14, while you slept)
 
+Ran `node tests/node-logic.test.js` — **25/25 pass**. This runs the REAL
+Code-node logic from the workflow JSON against the real form row +
+item_config.csv, in a mock n8n runtime. What it proves:
+
+- Validate Row: accepts the real order; rejects bad email + Delivery-without-address.
+- Normalize Order: splits the lechon multi-select into separate items, lowercases
+  email, captures fulfillment, hashes a stable source_row_id.
+- Build Line Items: matches all 3 selected items against item_config **despite
+  the double-spaces** in the form text (whitespace-normalized match works).
+  qty=1 each, rates from default_rate.
+- Catalogued path: when a row has a zoho_item_id, it emits `item_id` instead of
+  ad-hoc name/rate (verified by injecting a test id).
+- Build Invoice Payload: shipping_address on delivery, review flags in notes,
+  cf_source_row_id present.
+- Notify path: bad row → notify payload → formatted message with errors.
+
+I could NOT run the live n8n cloud (no API access to your instance, browser tool
+not connected). The steps below need you in the n8n UI.
+
+## Bugs found & fixed tonight (all committed + pushed)
+
+1. **$env → $vars** — n8n cloud blocks $env. (commit e2f783d)
+2. **Checkbox-form redesign** — form uses checkbox selections, not qty inputs;
+   rewrote item_config (match_text col) + Validate/Normalize/Build Line Items.
+3. **payment_method stale ref** — form has no payment question; removed. (fd19f7b)
+4. **Zoho auth** — added Zoho Auth node + Zoho-oauthtoken header. (d10708b)
+5. **item_config FAN-OUT (critical)** — Load item_config emitted 16 items, so the
+   whole pipeline ran 16× → duplicate contacts/invoices. Added "Single Order"
+   collapse node. (4dc1658) THIS is why you saw duplicate Jeremiah contacts.
+
+## DO THIS IN THE MORNING (n8n UI)
+
+### A. Re-import the latest sub-workflow
+`02_order_to_invoice.json` changed since your last import (Single Order node).
+Re-import it into **Bagnetchon — Order to Invoice (sub)**, then re-assign the
+`Google Sheets account` credential on **Load item_config** and **Write back to
+Source Row** (import wipes credential links).
+
+### B. Delete the duplicate test contacts in Zoho
+Zoho Invoice → Contacts → delete the extra "Jeremiah" entries created during
+testing (IDs ...101001, ...102001, and any more). Keep none or keep one — the
+workflow will match-or-create on next run.
+
+### C. Re-run from main and confirm single-pass
+Sheet Intake (main) → trigger → Fetch Test Event → click **Call: Order → Invoice**
+→ Execute. Open the sub-execution. Confirm:
+- Each node runs ONCE (not 16×).
+- Find Contact by Email matches the existing Jeremiah → no new contact.
+- Build Line Items: 3 line items, review has 3 entries (expected — no zoho_item_id yet).
+- Return Summary: ok=true, contact_lookup="matched_email", invoice_id=null
+  (Create Draft Invoice still disabled).
+
+### D. Fill zoho_item_id in item_config (optional, removes [REVIEW] flags)
+For each menu item, create it in Zoho Invoice → Items, copy its item_id into the
+`zoho_item_id` column of the item_config tab. Items left blank still work (ad-hoc
+line with default_rate + a [REVIEW] note on the draft).
+
+### E. Enable the two disabled nodes + smoke test
+In the sub-workflow, enable **Create Draft Invoice** and **Write back to Source
+Row**. Run once. Verify a Draft invoice appears in Zoho and the sheet row gets
+Invoice ID + Sync Status. Re-run the same row → should hit the idempotent branch
+(no second invoice).
+
+## Open items / decisions for you
+
+- **CURRENCY**: Zoho org base currency is **PHP**. The form prices are US dollars
+  ($25, $120, ...). Line-item rates (25, 120, ...) will be billed as ₱ not $.
+  Decide: change Zoho org/currency to USD, or treat numbers as PHP. Business call.
+- **cf_ custom fields**: Build Invoice Payload sends custom_fields with labels
+  cf_source_row_id, cf_fulfillment_date, cf_fulfillment_type, cf_event_type.
+  These MUST exist in Zoho Invoice → Settings → Custom Fields → Invoices, or the
+  invoice create call will reject them. Create them before enabling the invoice node.
+- **NOTIFY_CHANNEL=none**: notifications are silently dropped. Set a Slack webhook
+  (NOTIFY_SLACK_WEBHOOK + NOTIFY_CHANNEL=slack) when you want failure alerts.
+- **TEST_PLAN.md is stale**: written for the old qty-based model. Scenarios still
+  describe item_quantities / "Lechon Belly (1kg)" columns. Needs a rewrite for the
+  checkbox model if you want it as the canonical manual test doc.
+
+## How to re-run the local tests anytime
 ```
-sheet_column_header | zoho_item_id | item_name | active | default_rate
+node tests/node-logic.test.js
 ```
+No deps, no n8n needed. Edit the fixture row at the top of the test if the form changes.
 
-Rows to add:
-```
-Lechon Belly (1kg)    | <zoho_item_id or blank> | Lechon Belly (1kg)    | true | <price or blank>
-Whole Lechon (~10kg)  | <zoho_item_id or blank> | Whole Lechon (~10kg)  | true | <price or blank>
-Bagnet (1kg)          | <zoho_item_id or blank> | Bagnet (1kg)          | true | <price or blank>
-Roasted Pork (1kg)    | <zoho_item_id or blank> | Roasted Pork (1kg)    | true | <price or blank>
-```
-
-- `zoho_item_id`: find in Zoho Invoice → Items. Leave blank to use ad-hoc line item path.
-- `sheet_column_header`: must match **exactly** the column header in `Form Responses 3`.
-- `default_rate`: unit price fallback if not in Zoho catalog.
-
-### 2. Confirm Form Responses 3 column headers
-Open `Form Responses 3` tab → share exact header names for quantity columns.
-Must match `sheet_column_header` in item_config byte-for-byte.
-
-### 3. Assign Google Sheets credential on all nodes
-In each workflow, open any Google Sheets node with orange warning → assign `Google Sheets account` credential.
-
-### 4. Test dry run (TEST_PLAN scenarios 1–7)
-- Enable main workflow
-- Pin mock data on trigger node
-- Walk through TEST_PLAN.md scenarios 1–7 (no real Zoho writes — Create Draft Invoice is disabled)
-
-### 5. Enable disabled nodes (after dry run passes)
-Two nodes in `Order to Invoice (sub)` are `disabled: true`:
-- `Create Draft Invoice` — POST to Zoho
-- `Write back to Source Row` — Sheets update
-
-Enable only after dry run confirms correct payload.
-
-### 6. End-to-end smoke test (TEST_PLAN scenario 9)
-Submit real Google Form → verify invoice created in Zoho → check sheet writeback.
-
-## Key Credentials (stored in n8n Variables — do not commit real values)
-Zoho org: `.com` data center. Refresh token does not expire.
-Google Sheet: linked to Google Form (Form Responses 3 tab).
-n8n instance: jeremiahulan.app.n8n.cloud (14-day trial as of 2026-06-14).
+## Key facts (n8n Variables hold the real secret values — never committed)
+Zoho org: `.com` DC, org_id 927398966, refresh token does not expire.
+Google Sheet 10K7Ayr... linked to the Google Form, tab `Form Responses 3`.
+n8n: jeremiahulan.app.n8n.cloud (14-day trial as of 2026-06-14).
+Sub-workflow IDs: Order→Invoice 3mhDUwqqkQKG2sXE, Notify OwMpoe36X7rPNj8l.
