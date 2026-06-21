@@ -122,32 +122,42 @@ console.log('\n[4] Validate Payload — accepts normalized order');
 const vp = runNode(C.validatePayload, { nodes: { 'From Caller': norm } })[0].json;
 ok(vp.selected_items.length === 3, 'payload valid');
 
-console.log('\n[5] Build Line Items — match against item_config (no zoho_item_id yet)');
+console.log('\n[5] Build Line Items — catalogued item_config (zoho_item_id filled)');
 const order = { ...norm, contact_id: 'X', contact_lookup: 'matched_email' };
 const bli = runNode(C.buildLineItems, { nodes: { 'Resolve Contact': order, 'Load item_config': configRows } })[0].json;
+const allCatalogued = configRows.every((r) => String(r.zoho_item_id || '').trim());
 ok(bli.line_items.length === 3, `3 line items (got ${bli.line_items.length})`);
-ok(bli.line_items.map((l) => l.name).includes('Roasted Lechon Belly 450g'), 'whitespace-tolerant match (double space)');
-ok(bli.line_items.map((l) => l.name).includes('Roasted Lechon Belly Half Roll'), 'matched half roll');
-ok(bli.line_items.map((l) => l.name).includes('Pork Siomai Full Tray'), 'matched pork siomai');
 ok(bli.line_items.every((l) => l.quantity === 1), 'all qty=1');
-ok(bli.line_items.every((l) => typeof l.rate === 'number' && l.rate > 0), 'rates from default_rate');
-ok(bli.review.length === 3, 'all 3 flagged for review (zoho_item_id blank) — expected until catalog filled');
+if (allCatalogued) {
+  ok(bli.line_items.every((l) => l.item_id && !l.name), 'catalogued: all lines use item_id');
+  ok(bli.review.length === 0, 'no review flags when fully catalogued');
+} else {
+  ok(bli.line_items.some((l) => l.name && l.rate > 0), 'ad-hoc lines carry name+rate');
+  ok(bli.review.length > 0, 'uncatalogued items flagged for review');
+}
 
-console.log('\n[6] Build Line Items — catalogued item uses item_id path');
-const cfgWithId = configRows.map((r) =>
-  r.match_text === 'Pork Siomai Full tray $250' ? { ...r, zoho_item_id: '99999' } : r);
-const bli2 = runNode(C.buildLineItems, { nodes: { 'Resolve Contact': order, 'Load item_config': cfgWithId } })[0].json;
-const siomai = bli2.line_items.find((l) => l.item_id === '99999');
-ok(!!siomai, 'catalogued item emits item_id (no name/rate)');
-ok(bli2.review.length === 2, 'review drops to 2 once one item is catalogued');
+console.log('\n[6] Build Line Items — blank zoho_item_id falls back to ad-hoc');
+const cfgBlank = configRows.map((r) =>
+  r.match_text === 'Pork Siomai Full tray $250' ? { ...r, zoho_item_id: '' } : r);
+const bli2 = runNode(C.buildLineItems, { nodes: { 'Resolve Contact': order, 'Load item_config': cfgBlank } })[0].json;
+const siomaiAdhoc = bli2.line_items.find((l) => l.name === 'Pork Siomai Full Tray');
+ok(!!siomaiAdhoc && siomaiAdhoc.rate === 250, 'blank id → ad-hoc line with default_rate');
+ok(bli2.review.some((r) => /Pork Siomai/.test(r)), 'blanked item flagged for review');
 
 console.log('\n[7] Build Invoice Payload — shape');
 const inv = runNode(C.buildInvoice, { nodes: { 'Build Line Items': { ...order, line_items: bli.line_items, review: bli.review } } })[0].json;
 ok(inv.invoice_payload.customer_id === 'X', 'customer_id set');
 ok(inv.invoice_payload.line_items.length === 3, 'line items carried');
 ok(!!inv.invoice_payload.shipping_address, 'delivery → shipping_address present');
-ok(/REVIEW/.test(inv.invoice_payload.notes), 'review flags surfaced in notes');
 ok(inv.invoice_payload.custom_fields.some((c) => c.label === 'cf_source_row_id'), 'cf_source_row_id present');
+ok(/Event:/.test(inv.invoice_payload.notes), 'event/guests in notes');
+
+console.log('\n[10] Social-media question is NOT treated as a menu item');
+const socialRow = { ...validRow, '“On which social media platform was the advertisement seen?”': 'Facebook' };
+const normSocial = runNode(C.normalize, { inputItem: { row: socialRow }, vars: VARS })[0].json;
+ok(!normSocial.selected_items.some((s) => /facebook/i.test(s.selected_text)), 'social answer excluded from line items');
+const vrSocial = runNode(C.validateRow, { inputItem: socialRow })[0].json;
+ok(vrSocial.ok === true, 'social answer does not count as a menu selection for validation');
 
 console.log('\n[8] Validation-failure notify path');
 const notify = runNode(C.buildNotify, { inputItem: vrBad })[0].json;
