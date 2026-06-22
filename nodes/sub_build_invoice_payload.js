@@ -1,14 +1,26 @@
 const order = $('Build Line Items').item.json;
-
-// Event + guest context goes in notes (no spare custom-field slot: plan allows 3).
+const c = order.customer || {};
 const f = order.fulfillment || {};
-const ctx = [];
-if (f.event_type) ctx.push('Event: ' + f.event_type);
-if (f.guest_count) ctx.push('Guests: ' + f.guest_count);
+
+// Order-summary block (mirrors the "Subject" section of the manual invoices).
+// Zoho's invoice create API has no writable Subject field, so this renders in
+// Notes — the reliable place that always shows on the invoice/PDF.
+const summary = [
+  'ORDER SUMMARY',
+  c.name ? 'Name: ' + c.name : '',
+  f.date ? 'Date/Time: ' + f.date : '',
+  c.phone ? 'Phone: ' + c.phone : '',
+  c.email ? 'Email: ' + c.email : '',
+  f.type ? 'Service: ' + f.type : '',
+  f.address ? 'Delivery location: ' + f.address : '',
+  (f.event_type || f.guest_count)
+    ? ('Event: ' + (f.event_type || '') + (f.guest_count ? (' | Guests: ' + f.guest_count) : ''))
+    : '',
+].filter(Boolean).join('\n');
 
 const notes = [
-  ctx.join(' | '),
-  order.special_instructions || '',
+  summary,
+  order.special_instructions ? '\n' + order.special_instructions : '',
   ...(order.review || []).map((r) => '[REVIEW: uncatalogued item — ' + r + ']'),
 ]
   .filter(Boolean)
@@ -29,6 +41,8 @@ const custom_fields = [
 const payload = {
   customer_id: order.contact_id,
   date: new Date().toISOString().slice(0, 10),
+  // Short reference shown near the top of the invoice.
+  reference_number: order.source_row_id,
   line_items: order.line_items,
   notes,
   custom_fields,
