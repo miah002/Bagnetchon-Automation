@@ -1,0 +1,89 @@
+name,item_id,rate,status
+"""Credit Card Processing Fee (3%)""",5729797000000509114,0.0,inactive
+Artisan Kakanin Medley,5729797000000388056,280.0,active
+Artisan Kakanin Special,5729797000000399030,120.0,inactive
+Authentic Dinakdakan,5729797000000434011,280.0,active
+Authentic Sisig  Maharlika,5729797000000434092,300.0,active
+Bagnetchon On-Site Catering Service.,5729797000000365033,250.0,active
+Bagnetchon Signature Catering Experience,5729797000000178012,300.0,active
+Bistek    Tagalog,5729797000000399019,265.0,active
+Broccoli   Shrimp,5729797000000399069,220.0,active
+Buko Pandan,5729797000000465046,270.0,active
+Calamari Squid,5729797000000388034,250.0,active
+Chef Bagnet Sarsa,5729797000000189031,0.0,active
+Chef Service,5729797000000164042,300.0,active
+Chicken  Kare  kare,5729797000000457015,260.0,active
+Chicken Curry,5729797000000465031,250.0,active
+Chop Suey,5729797000000410030,250.0,active
+Chopping Fee,5729797000000207102,50.0,active
+Chopping fee and Chef Service,5729797000000240030,300.0,active
+Classic Chop Suey,5729797000000325019,190.0,active
+Credit card / Debit Card,5729797000000222030,0.0,active
+Customer Discount,5729797000000227047,-24.0,inactive
+Customer Gratuity,5729797000000585023,100.0,active
+Delivery  &  Insurance,5729797000000259114,0.0,active
+Delivery  Date  Time   Location,5729797000000233147,0.0,active
+Delivery  Fee location Date,5729797000000244042,0.0,active
+Delivery / Pick-Up / Meet-Up,5729797000000212023,0.0,inactive
+Delivery date and location,5729797000000226019,0.0,inactive
+Delivery Fee,5729797000000215033,48.0,active
+Delivery Insurance location   Time,5729797000000266038,10.0,active
+Delivery location &  Insurance,5729797000000268020,1.0,active
+Delivery location / Address,5729797000000215082,0.0,inactive
+Discount,5729797000000473047,-50.0,active
+Free Chef  Bagnet Sarsa,5729797000000206063,0.0,active
+FREE Delivery Promo!,5729797000000310023,0.0,active
+Free unlimited Sarsa,5729797000000240041,0.0,active
+Full payment,5729797000000585001,-345.0,active
+Full Payment,5729797000000532018,2118.0,active
+Garlic Shrimp,5729797000000388001,235.0,active
+General Liability (Basic Catering Insurance):,5729797000000240052,80.0,active
+Honey Walnut Shrimp,5729797000000399080,250.0,active
+Insurance Delivery  location  Date,5729797000000266027,10.0,active
+Kare-Kare Beef,5729797000000388023,250.0,active
+Lechon catering,5729797000000118044,500.0,active
+Lechon Mani Paksiw,5729797000000173036,250.0,active
+Less Discount,5729797000000239041,-30.0,active
+Lumpia Shanghai Rolls,5729797000000222019,180.0,active
+LUMPIANG SHANGHAI,5729797000000178001,180.0,active
+Maharlika Sisig,5729797000000173025,250.0,active
+Manila Pansit  Canton-Bihon,5729797000000240019,170.0,active
+On site Chopping fee,5729797000000244019,50.0,active
+On-Site Carving Experience,5729797000000379032,350.0,active
+On-Site Carving Experience  and,5729797000000558025,250.0,active
+Orange Chicken,5729797000000388012,235.0,active
+Pansit  Canton Bihon,5729797000000173078,60.0,active
+Partial Payment,5729797000000358095,-808.0,active
+Payment Confirmation:,5729797000000585018,500.0,active
+PayPal Transaction Fee,5729797000000305001,13.5,active
+Pick-up,5729797000000268167,0.0,active
+Pick-Up  / Meet-Up location,5729797000000218013,0.0,active
+Pick-up /  Meet-up,5729797000000165019,0.0,active
+Pick-up location,5729797000000224019,1.0,active
+Pork Menudo,5729797000000325030,220.0,active
+Pork Siomai,5729797000000410019,250.0,active
+Product Special Discount,5729797000000220071,20.0,active
+PROFESSIONAL SERVICES,5729797000000389001,1740.0,active
+Roasted Cochinillo,5729797000000140023,380.0,active
+Roasted Lechon,5729797000000145019,1100.0,active
+Roasted Lechon Belly,5729797000000179019,120.0,active
+Roasted lechon Cochinillo,5729797000000365198,450.0,active
+Roasted Lechon De Leche,5729797000000225005,480.0,active
+Roasted Lechon Pata,5729797000000211011,96.0,active
+Roasted Lechon Pig,5729797000000144055,420.0,active
+Roasted LechonBelly,5729797000000447029,290.0,active
+ROASTED PIG,5729797000000118035,550.0,active
+Roasted Whole Lechon De Leche,5729797000000170019,480.0,active
+Roasted Whole Pig  Lechon,5729797000000149019,1148.0,active
+Roasted Whole Pig lechon,5729797000000164031,550.0,active
+Roasted. Lechon  pig,5729797000000379011,600.0,active
+Roasted. Lechon De leche,5729797000000571041,500.0,active
+Safety & Compliance,5729797000000178043,200.0,active
+Shanghai Rolls,5729797000000457030,180.0,active
+Special Event Liability & Safety Compliance,5729797000000486042,250.0,active
+Special Event Liability & Safety Coverage ( Insurance fee),5729797000000486037,250.0,active
+Steamed Rice,5729797000000173059,80.0,active
+Tax,5729797000000258001,0.0,active
+Trapul Rice & Mushroom Filling,5729797000000538015,40.0,active
+Truffled rice with Mushroom,5729797000000538055,50.0,active
+✔️On-site chef or staff carving   Fee,5729797000000186025,500.0,active
