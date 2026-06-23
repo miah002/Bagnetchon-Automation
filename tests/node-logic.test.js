@@ -53,7 +53,7 @@ function parseCsv(text) {
 const configRows = parseCsv(fs.readFileSync(path.join(ROOT, 'item_config.csv'), 'utf8'));
 
 // --- mini n8n runtime ---
-function runNode(code, { inputItem = {}, inputItems = null, nodes = {}, vars = {} } = {}) {
+function runNode(code, { inputItem = {}, inputItems = null, nodes = {}, vars = {}, staticData = {} } = {}) {
   const items = inputItems || [inputItem];
   const $input = { item: { json: items[0] }, all: () => items.map((j) => ({ json: j })) };
   const $ = (name) => {
@@ -61,8 +61,9 @@ function runNode(code, { inputItem = {}, inputItems = null, nodes = {}, vars = {
     const arr = Array.isArray(nodes[name]) ? nodes[name] : [nodes[name]];
     return { item: { json: arr[0] }, all: () => arr.map((j) => ({ json: j })) };
   };
-  const fn = new Function('$input', '$', '$vars', 'require', code);
-  return fn($input, $, vars, (m) => (m === 'crypto' ? crypto : require(m)));
+  const $getWorkflowStaticData = () => staticData;
+  const fn = new Function('$input', '$', '$vars', 'require', '$getWorkflowStaticData', code);
+  return fn($input, $, vars, (m) => (m === 'crypto' ? crypto : require(m)), $getWorkflowStaticData);
 }
 
 const LECHON_HEADER = 'Bagnetchon Signature Menu -- \nHome of Premium Filipino Roasted Lechon';
@@ -98,6 +99,8 @@ const C = {
   buildLineItems: nodeCode('02_order_to_invoice.json', 'Build Line Items'),
   buildInvoice: nodeCode('02_order_to_invoice.json', 'Build Invoice Payload'),
   formatMessage: nodeCode('03_notify.json', 'Format Message'),
+  cacheLookup: nodeCode('02_order_to_invoice.json', 'Contact Cache Lookup'),
+  resolveContact: nodeCode('02_order_to_invoice.json', 'Resolve Contact'),
 };
 
 console.log('\n[1] Validate Row — valid order');
@@ -183,6 +186,37 @@ const normMulti = runNode(C.normalize, { inputItems: [{ row: validRow }, { row: 
 ok(normMulti.length === 2, `Normalize returns 2 orders (got ${normMulti.length})`);
 ok(normMulti[1].json.customer.name === 'Test Miah', 'second row (Test Miah) not dropped');
 ok(normMulti[0].json.source_row_id !== normMulti[1].json.source_row_id, 'distinct source_row_ids');
+
+console.log('\n[11] Same-batch contact dedupe — cache lookup + Resolve Contact');
+// Shared static data simulates one trigger poll processing two orders for the
+// SAME new customer (mode:each runs the sub sequentially in one parent run).
+const sd = {};
+const payloadA = { source: 'google_sheet', source_row_id: 'gs:aaa', customer: { email: 'New@Buyer.com', name: 'New Buyer', phone: '111' }, selected_items: [] };
+const payloadB = { ...payloadA, source_row_id: 'gs:bbb' };
+
+// Order A: cache empty → miss → falls to create branch → Resolve writes cache.
+const lookupA = runNode(C.cacheLookup, { nodes: { 'Validate Payload': payloadA }, staticData: sd })[0].json;
+ok(lookupA._cache_hit === false, 'order A: cache miss (no prior contact)');
+const resolvedA = runNode(C.resolveContact, {
+  nodes: { 'Validate Payload': payloadA, 'Contact Cache Lookup': lookupA, 'Create Contact': { contact: { contact_id: 'CID-NEW' } } },
+  staticData: sd,
+})[0].json;
+ok(resolvedA.contact_id === 'CID-NEW' && resolvedA.contact_lookup === 'created', 'order A: created contact');
+ok(sd.contactCache && sd.contactCache['new@buyer.com']?.contact_id === 'CID-NEW', 'order A: contact cached by lowercased email');
+
+// Order B: same email, cache now warm → hit → reuse, NO create branch.
+const lookupB = runNode(C.cacheLookup, { nodes: { 'Validate Payload': payloadB }, staticData: sd })[0].json;
+ok(lookupB._cache_hit === true && lookupB._cache_contact_id === 'CID-NEW', 'order B: cache hit reuses contact');
+const resolvedB = runNode(C.resolveContact, {
+  nodes: { 'Validate Payload': payloadB, 'Contact Cache Lookup': lookupB },
+  staticData: sd,
+})[0].json;
+ok(resolvedB.contact_id === 'CID-NEW' && resolvedB.contact_lookup === 'cache', 'order B: resolved from cache, no duplicate created');
+
+// Stale entry (older than TTL) is ignored.
+const sdStale = { contactCache: { 'new@buyer.com': { contact_id: 'OLD', ts: Date.now() - 6 * 60 * 1000 } } };
+const lookupStale = runNode(C.cacheLookup, { nodes: { 'Validate Payload': payloadA }, staticData: sdStale })[0].json;
+ok(lookupStale._cache_hit === false, 'stale cache entry (>5min) ignored');
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

@@ -385,7 +385,7 @@
     {
       "parameters": {
         "language": "javaScript",
-        "jsCode": "/**\n * Sub-workflow — \"Resolve Contact\" Code node\n * ----------------------------------------------------------------------------\n * Reads the outputs of the three preceding contact-resolution HTTP nodes\n * (Find by Email → Find by Phone → Create) and picks the contact_id from\n * whichever path succeeded. Only one of the three branches will have run\n * for any single execution; the others will be undefined.\n *\n * Output is the normalized order plus `contact_id` and `contact_lookup`\n * (\"matched_email\" | \"matched_phone\" | \"created\"), passed forward.\n */\nconst order = $('Validate Payload').item.json;\n\nlet contact_id = null;\nlet lookup = null;\n\n// Email-match branch\ntry {\n  const out = $('Find Contact by Email').item?.json;\n  if (out?.contacts?.length > 0) {\n    contact_id = out.contacts[0].contact_id;\n    lookup = 'matched_email';\n  }\n} catch (_) { /* branch didn't run */ }\n\n// Phone-match branch\nif (!contact_id) {\n  try {\n    const out = $('Find Contact by Phone').item?.json;\n    if (out?.contacts?.length > 0) {\n      contact_id = out.contacts[0].contact_id;\n      lookup = 'matched_phone';\n    }\n  } catch (_) { /* branch didn't run */ }\n}\n\n// Create branch\nif (!contact_id) {\n  try {\n    const out = $('Create Contact').item?.json;\n    contact_id = out?.contact?.contact_id || null;\n    if (contact_id) lookup = 'created';\n  } catch (_) { /* branch didn't run */ }\n}\n\nif (!contact_id) {\n  throw new Error('Could not resolve a Zoho contact_id (no match and no create result).');\n}\n\nreturn [{ json: { ...order, contact_id, contact_lookup: lookup } }];\n"
+        "jsCode": "/**\n * Sub-workflow — \"Resolve Contact\" Code node\n * ----------------------------------------------------------------------------\n * Reads the outputs of the three preceding contact-resolution HTTP nodes\n * (Find by Email → Find by Phone → Create) and picks the contact_id from\n * whichever path succeeded. Only one of the three branches will have run\n * for any single execution; the others will be undefined.\n *\n * Output is the normalized order plus `contact_id` and `contact_lookup`\n * (\"matched_email\" | \"matched_phone\" | \"created\"), passed forward.\n */\nconst order = $('Validate Payload').item.json;\n\nlet contact_id = null;\nlet lookup = null;\n\n// Cache-hit branch — same-batch dedupe (see Contact Cache Lookup)\ntry {\n  const out = $('Contact Cache Lookup').item?.json;\n  if (out?._cache_hit && out?._cache_contact_id) {\n    contact_id = out._cache_contact_id;\n    lookup = 'cache';\n  }\n} catch (_) { /* node didn't run */ }\n\n// Email-match branch\ntry {\n  const out = $('Find Contact by Email').item?.json;\n  if (out?.contacts?.length > 0) {\n    contact_id = out.contacts[0].contact_id;\n    lookup = 'matched_email';\n  }\n} catch (_) { /* branch didn't run */ }\n\n// Phone-match branch\nif (!contact_id) {\n  try {\n    const out = $('Find Contact by Phone').item?.json;\n    if (out?.contacts?.length > 0) {\n      contact_id = out.contacts[0].contact_id;\n      lookup = 'matched_phone';\n    }\n  } catch (_) { /* branch didn't run */ }\n}\n\n// Create branch\nif (!contact_id) {\n  try {\n    const out = $('Create Contact').item?.json;\n    contact_id = out?.contact?.contact_id || null;\n    if (contact_id) lookup = 'created';\n  } catch (_) { /* branch didn't run */ }\n}\n\nif (!contact_id) {\n  throw new Error('Could not resolve a Zoho contact_id (no match and no create result).');\n}\n\n// Cache email->contact_id (short TTL) so another order for the SAME new customer\n// in this batch reuses it instead of creating a duplicate. Persists only for\n// active (production) executions; harmless no-op in manual test.\ntry {\n  const sd = $getWorkflowStaticData('global');\n  sd.contactCache = sd.contactCache || {};\n  const email = String(order.customer?.email || '').trim().toLowerCase();\n  if (email && contact_id) sd.contactCache[email] = { contact_id, ts: Date.now() };\n} catch (_) { /* static data unavailable */ }\n\nreturn [{ json: { ...order, contact_id, contact_lookup: lookup } }];\n"
       },
       "id": "5c89c2ba-8a5a-4483-bbb0-ee486f6a0fb4",
       "name": "Resolve Contact",
@@ -574,6 +574,52 @@
         750,
         300
       ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Same-batch contact de-dupe. Zoho's contact search lags a few seconds after a\n// create, so two orders from the SAME new customer in one trigger poll would each\n// miss the lookup and create a duplicate. Cache email->contact_id (short TTL) in\n// workflow static data; Resolve Contact writes it. Persists only for active runs.\nconst order = $('Validate Payload').item.json;\nconst email = String(order.customer?.email || '').trim().toLowerCase();\nconst sd = $getWorkflowStaticData('global');\nsd.contactCache = sd.contactCache || {};\nconst TTL_MS = 5 * 60 * 1000;\nconst hit = email ? sd.contactCache[email] : null;\nconst fresh = hit && (Date.now() - hit.ts) < TTL_MS;\nreturn [{ json: { ...order, _cache_hit: !!fresh, _cache_contact_id: fresh ? hit.contact_id : null } }];"
+      },
+      "id": "contact-cache-lookup-0001",
+      "name": "Contact Cache Lookup",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cache-hit-cond-0001",
+              "leftValue": "={{ $json._cache_hit }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cache-hit-if-0001",
+      "name": "Cache Hit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        600
+      ]
     }
   ],
   "connections": {
@@ -637,6 +683,35 @@
         [
           {
             "node": "Exit Idempotent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Contact Cache Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact Cache Lookup": {
+      "main": [
+        [
+          {
+            "node": "Cache Hit?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Hit?": {
+      "main": [
+        [
+          {
+            "node": "Resolve Contact",
             "type": "main",
             "index": 0
           }
