@@ -1,5 +1,5 @@
 {
-  "name": "Bagnetchon \u2014 Notify (sub)",
+  "name": "Bagnetchon — Notify (sub)",
   "nodes": [
     {
       "parameters": {
@@ -17,7 +17,7 @@
     {
       "parameters": {
         "language": "javaScript",
-        "jsCode": "/**\n * Notify sub-workflow \u2014 \"Format Message\" Code node\n * ----------------------------------------------------------------------------\n * Formats the incoming payload into a single human-readable message used\n * by both Slack and email channels.\n */\nconst p = $input.item.json;\nconst lines = [];\n\nlines.push(`*Bagnetchon automation alert*`);\nlines.push(`severity: ${p.severity ?? 'info'}`);\nlines.push(`stage:    ${p.stage ?? 'unknown'}`);\nlines.push(`source:   ${p.source ?? 'unknown'}`);\n\nif (Array.isArray(p.errors) && p.errors.length) {\n  lines.push('');\n  lines.push('errors:');\n  for (const e of p.errors) lines.push(`  - ${e}`);\n}\n\nif (p.row && typeof p.row === 'object') {\n  lines.push('');\n  lines.push('row:');\n  for (const [k, v] of Object.entries(p.row)) {\n    lines.push(`  ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`);\n  }\n}\n\nif (p.error_message) {\n  lines.push('');\n  lines.push(`error: ${p.error_message}`);\n}\n\nconst text = lines.join('\\n');\nconst subject = `[Bagnetchon] ${p.severity ?? 'info'} at ${p.stage ?? 'unknown'}`;\n\nreturn [{ json: { text, subject } }];\n"
+        "jsCode": "/**\n * Notify sub-workflow — \"Format Message\" Code node\n * Formats the incoming payload into one human-readable message for Slack/email.\n * Handles failure payloads (errors/row) and success pings (fields/review).\n */\nconst p = $input.item.json;\nconst lines = [];\n\nconst isInfo = (p.severity ?? 'info') === 'info';\nlines.push(isInfo ? `*Bagnetchon — new invoice*` : `*Bagnetchon automation alert*`);\nlines.push(`severity: ${p.severity ?? 'info'}`);\nlines.push(`stage:    ${p.stage ?? 'unknown'}`);\nlines.push(`source:   ${p.source ?? 'unknown'}`);\n\nif (p.fields && typeof p.fields === 'object') {\n  lines.push('');\n  for (const [k, v] of Object.entries(p.fields)) lines.push(`  ${k}: ${v}`);\n}\n\nif (Array.isArray(p.review) && p.review.length) {\n  lines.push('');\n  lines.push('review:');\n  for (const r of p.review) lines.push(`  - ${r}`);\n}\n\nif (Array.isArray(p.errors) && p.errors.length) {\n  lines.push('');\n  lines.push('errors:');\n  for (const e of p.errors) lines.push(`  - ${e}`);\n}\n\nif (p.row && typeof p.row === 'object') {\n  lines.push('');\n  lines.push('row:');\n  for (const [k, v] of Object.entries(p.row)) {\n    lines.push(`  ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`);\n  }\n}\n\nif (p.error_message) {\n  lines.push('');\n  lines.push(`error: ${p.error_message}`);\n}\n\nconst text = lines.join('\\n');\nconst subject = `[Bagnetchon] ${p.severity ?? 'info'} at ${p.stage ?? 'unknown'}`;\n\nreturn [{ json: { text, subject } }];"
       },
       "id": "aeb99ccf-1816-4c6f-96ca-ead438ad0803",
       "name": "Format Message",

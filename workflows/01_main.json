@@ -91,6 +91,39 @@
     },
     {
       "parameters": {
+        "jsCode": "// Ping Slack only for NEWLY created invoices: skip idempotent re-runs and\n// any row that produced no invoice. One notify payload per invoice.\nreturn $input.all()\n  .map((e) => e.json)\n  .filter((s) => s && s.ok === true && s.idempotent !== true && s.invoice_id)\n  .map((s) => ({ json: {\n    severity: 'info',\n    stage: 'invoice-created',\n    source: s.source || 'google_sheet',\n    fields: {\n      invoice: s.invoice_number || s.invoice_id,\n      customer: s.customer_name || '(unknown)',\n      total: (s.total != null) ? ((s.currency ? s.currency + ' ' : '') + s.total) : '(n/a)',\n      contact: s.contact_lookup,\n    },\n    review: Array.isArray(s.review_flags) ? s.review_flags : [],\n  } }));"
+      },
+      "id": "b1f0c2a3-success-notify-0001",
+      "name": "Build Success Notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "OwMpoe36X7rPNj8l",
+          "cachedResultName": "Bagnetchon — Notify (sub)"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "c2e1d3b4-call-notify-success-0001",
+      "name": "Call: Notify (success)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        368
+      ]
+    },
+    {
+      "parameters": {
         "jsCode": "// Build a notify payload for EACH failed row.\nreturn $input.all().map((entry) => {\n  const v = entry.json;\n  return { json: {\n    severity: 'error',\n    stage: 'sheet-intake-validation',\n    source: 'google_sheet',\n    errors: v.errors || ['unknown validation failure'],\n    row: v.row,\n  }};\n});"
       },
       "id": "86cbb42a-7bbf-44ad-8b10-ec4d88163c4d",
@@ -200,6 +233,28 @@
         [
           {
             "node": "Call: Order → Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call: Order → Invoice": {
+      "main": [
+        [
+          {
+            "node": "Build Success Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Success Notify": {
+      "main": [
+        [
+          {
+            "node": "Call: Notify (success)",
             "type": "main",
             "index": 0
           }

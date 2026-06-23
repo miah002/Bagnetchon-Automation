@@ -101,6 +101,7 @@ const C = {
   formatMessage: nodeCode('03_notify.json', 'Format Message'),
   cacheLookup: nodeCode('02_order_to_invoice.json', 'Contact Cache Lookup'),
   resolveContact: nodeCode('02_order_to_invoice.json', 'Resolve Contact'),
+  buildSuccessNotify: nodeCode('01_main.json', 'Build Success Notify'),
 };
 
 console.log('\n[1] Validate Row — valid order');
@@ -217,6 +218,23 @@ ok(resolvedB.contact_id === 'CID-NEW' && resolvedB.contact_lookup === 'cache', '
 const sdStale = { contactCache: { 'new@buyer.com': { contact_id: 'OLD', ts: Date.now() - 6 * 60 * 1000 } } };
 const lookupStale = runNode(C.cacheLookup, { nodes: { 'Validate Payload': payloadA }, staticData: sdStale })[0].json;
 ok(lookupStale._cache_hit === false, 'stale cache entry (>5min) ignored');
+
+console.log('\n[12] Success notify — only newly created invoices ping Slack');
+const summaries = [
+  { ok: true, idempotent: false, source: 'google_sheet', invoice_id: '1', invoice_number: 'INV-1', customer_name: 'Alice', total: 1280, currency: 'USD', contact_lookup: 'matched_email', review_flags: [] },
+  { ok: true, idempotent: true,  source: 'google_sheet', invoice_id: '2', invoice_number: 'INV-2', customer_name: 'Bob', total: 500, currency: 'USD' }, // skipped — re-run
+  { ok: true, idempotent: false, source: 'google_sheet', invoice_id: null, customer_name: 'Carol' }, // skipped — no invoice
+  { ok: true, idempotent: false, source: 'google_sheet', invoice_id: '3', invoice_number: 'INV-3', customer_name: 'Dave', total: 90, currency: 'USD', contact_lookup: 'created', review_flags: ['uncatalogued item "X"'] },
+];
+const notifies = runNode(C.buildSuccessNotify, { inputItems: summaries }).map((i) => i.json);
+ok(notifies.length === 2, `only created invoices notify (got ${notifies.length}, expected 2)`);
+ok(notifies.every((n) => n.severity === 'info' && n.stage === 'invoice-created'), 'success payloads are info/invoice-created');
+ok(notifies[0].fields.invoice === 'INV-1' && notifies[0].fields.customer === 'Alice' && notifies[0].fields.total === 'USD 1280', 'fields carry invoice/customer/total');
+ok(notifies[1].review.length === 1, 'review flags carried into success ping');
+
+const okMsg = runNode(C.formatMessage, { inputItem: notifies[0] })[0].json;
+ok(/Bagnetchon — new invoice/.test(okMsg.text), 'success message uses new-invoice header (not alert)');
+ok(/invoice: INV-1/.test(okMsg.text) && /customer: Alice/.test(okMsg.text), 'success message renders fields');
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
