@@ -219,22 +219,30 @@ const sdStale = { contactCache: { 'new@buyer.com': { contact_id: 'OLD', ts: Date
 const lookupStale = runNode(C.cacheLookup, { nodes: { 'Validate Payload': payloadA }, staticData: sdStale })[0].json;
 ok(lookupStale._cache_hit === false, 'stale cache entry (>5min) ignored');
 
-console.log('\n[12] Success notify — only newly created invoices ping Slack');
+console.log('\n[12] Success notify — only newly created invoices ping Slack, with order detail');
 const summaries = [
-  { ok: true, idempotent: false, source: 'google_sheet', invoice_id: '1', invoice_number: 'INV-1', customer_name: 'Alice', total: 1280, currency: 'USD', contact_lookup: 'matched_email', review_flags: [] },
-  { ok: true, idempotent: true,  source: 'google_sheet', invoice_id: '2', invoice_number: 'INV-2', customer_name: 'Bob', total: 500, currency: 'USD' }, // skipped — re-run
-  { ok: true, idempotent: false, source: 'google_sheet', invoice_id: null, customer_name: 'Carol' }, // skipped — no invoice
-  { ok: true, idempotent: false, source: 'google_sheet', invoice_id: '3', invoice_number: 'INV-3', customer_name: 'Dave', total: 90, currency: 'USD', contact_lookup: 'created', review_flags: ['uncatalogued item "X"'] },
+  { ok: true, idempotent: false, source: 'google_sheet', source_row_id: 'gs:a', invoice_id: '1', invoice_number: 'INV-1', customer_name: 'Alice', total: 1280, currency: 'USD', contact_lookup: 'matched_email', review_flags: [] },
+  { ok: true, idempotent: true,  source: 'google_sheet', source_row_id: 'gs:b', invoice_id: '2', invoice_number: 'INV-2', customer_name: 'Bob', total: 500, currency: 'USD' }, // skipped — re-run
+  { ok: true, idempotent: false, source: 'google_sheet', source_row_id: 'gs:c', invoice_id: null, customer_name: 'Carol' }, // skipped — no invoice
+  { ok: true, idempotent: false, source: 'google_sheet', source_row_id: 'gs:d', invoice_id: '3', invoice_number: 'INV-3', customer_name: 'Dave', total: 90, currency: 'USD', contact_lookup: 'created', review_flags: ['uncatalogued item "X"'] },
 ];
-const notifies = runNode(C.buildSuccessNotify, { inputItems: summaries }).map((i) => i.json);
+const normalizedOrders = [
+  { source_row_id: 'gs:a', customer: { name: 'Alice', phone: '0917', email: 'alice@x.com' }, fulfillment: { date: '06/20/2026 4PM', type: 'Delivery', address: 'LA', event_type: 'Birthday', guest_count: 50 }, selected_items: [{ selected_text: 'Roasted Lechon Belly 450g $25 per pack' }, { selected_text: 'Pork Siomai Full tray $250' }] },
+  { source_row_id: 'gs:d', customer: { name: 'Dave', phone: '0918', email: 'dave@x.com' }, fulfillment: { date: '07/01/2026', type: 'Pickup', address: 'should-be-hidden', event_type: '', guest_count: null }, selected_items: [{ selected_text: 'Steamed Rice Full tray $90' }] },
+];
+const notifies = runNode(C.buildSuccessNotify, { inputItems: summaries, nodes: { 'Normalize Order': normalizedOrders } }).map((i) => i.json);
 ok(notifies.length === 2, `only created invoices notify (got ${notifies.length}, expected 2)`);
 ok(notifies.every((n) => n.severity === 'info' && n.stage === 'invoice-created'), 'success payloads are info/invoice-created');
 ok(notifies[0].fields.invoice === 'INV-1' && notifies[0].fields.customer === 'Alice' && notifies[0].fields.total === 'USD 1280', 'fields carry invoice/customer/total');
+ok(notifies[0].fields.phone === '0917' && notifies[0].fields.date === '06/20/2026 4PM' && notifies[0].fields.service === 'Delivery', 'fields carry phone/date/service from normalized order');
+ok(notifies[0].fields.location === 'LA' && /Birthday \(50 guests\)/.test(notifies[0].fields.event), 'delivery location + event/guests included');
+ok(/Roasted Lechon Belly/.test(notifies[0].fields.items) && /Pork Siomai/.test(notifies[0].fields.items), 'ordered items listed');
+ok(!('location' in notifies[1].fields), 'pickup order omits delivery location');
 ok(notifies[1].review.length === 1, 'review flags carried into success ping');
 
 const okMsg = runNode(C.formatMessage, { inputItem: notifies[0] })[0].json;
 ok(/Bagnetchon — new invoice/.test(okMsg.text), 'success message uses new-invoice header (not alert)');
-ok(/invoice: INV-1/.test(okMsg.text) && /customer: Alice/.test(okMsg.text), 'success message renders fields');
+ok(/invoice: INV-1/.test(okMsg.text) && /customer: Alice/.test(okMsg.text) && /items: /.test(okMsg.text), 'success message renders enriched fields');
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
