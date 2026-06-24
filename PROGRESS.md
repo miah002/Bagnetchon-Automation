@@ -1,5 +1,55 @@
 # Setup Progress
 
+## PRODUCTION DEPLOYMENT (switch fully to real org 871137692)
+
+Decision: new prod Google Form + its own response tab → real Zoho org.
+Reuse the same 3 workflows + n8n Variables (test stops once vars repoint).
+
+### Step 1 — Prod Google Form + sheet
+- [ ] Duplicate the TEST form (Forms → ⋮ → **Make a copy**). DO NOT rebuild —
+      the code keys off exact column headers (lechon multi-select header,
+      `Service Method `, `Delivery location `, etc.).
+- [ ] Form → Responses → link to a spreadsheet (new is fine). Note its
+      spreadsheet ID + the responses tab name.
+- [ ] Add an **item_config** tab to that SAME prod spreadsheet. Paste from
+      `item_config_real_org.csv`. Column D (zoho_item_id) formatted **Plain text**.
+- [ ] Add two columns to the prod responses tab: **Invoice ID**, **Sync Status**
+      (write-back is now enabled and targets these).
+
+### Step 2 — Real Zoho self-client refresh token (write scope!)
+- [ ] api-console.zoho.com → Self Client (org 871137692). Generate code with
+      scope **`ZohoInvoice.fullaccess.all`** (read-only token won't create).
+- [ ] Exchange code → refresh_token.
+
+### Step 3 — Repoint n8n Variables
+| Variable | New value |
+|----------|-----------|
+| GS_SPREADSHEET_ID | prod spreadsheet id |
+| GS_RESPONSES_SHEET | prod responses tab name |
+| GS_ITEM_CONFIG_SHEET | item_config (unchanged, now in prod sheet) |
+| ZOHO_ORG_ID | 871137692 |
+| ZOHO_CLIENT_ID / SECRET / REFRESH_TOKEN | real-org self-client (fullaccess) |
+| ZOHO_BASE_URL / ZOHO_ACCOUNTS_URL | unchanged (.com DC) |
+| NOTIFY_CHANNEL | slack |
+| NOTIFY_SLACK_WEBHOOK | incoming-webhook url |
+
+### Step 4 — Real Zoho org config
+- [ ] Settings → Custom Fields → Invoices: create `cf_source_row_id`,
+      `cf_fulfillment_date`, `cf_fulfillment_type` (Text, single line).
+- [ ] Template: Subject **Show on PDF**; Terms & Conditions visible.
+- [ ] Verify item_config_real_org.csv flagged mappings (lechon / Shanghai /
+      Pansit) point at the right real item_ids.
+
+### Step 5 — Import + activate
+- [ ] Re-import all 3 workflows. Re-assign Google Sheets credential on the
+      Trigger (01), Load item_config + Write back (02).
+- [ ] Activate the main workflow.
+- [ ] Submit one real test order → verify: invoice in real Zoho, Slack ping,
+      sheet row gets Invoice ID + Sync Status, re-submit same row → idempotent.
+
+NOTE: write-back + contact cache + success Slack only run on ACTIVE
+executions, not manual Fetch Test Event.
+
 ## Completed
 
 - [x] Repo cloned locally (`claude/eloquent-ptolemy-g92w8h`)

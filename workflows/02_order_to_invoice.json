@@ -488,9 +488,9 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "row_number": "={{ $json.writeback.row_number }}",
-            "Invoice ID": "={{ $json.invoice_id }}",
-            "Sync Status": "={{ $json.invoice_status }}"
+            "row_number": "={{ $('Build Invoice Payload').item.json.writeback.row_number }}",
+            "Invoice ID": "={{ $json.invoice.invoice_id }}",
+            "Sync Status": "={{ $json.invoice.status }}"
           },
           "matchingColumns": [
             "row_number"
@@ -507,8 +507,8 @@
         3740,
         420
       ],
-      "disabled": true,
-      "notes": "DISABLED on purpose. Enable after the Create Draft Invoice step is verified. Updates the 'Invoice ID' and 'Sync Status' columns on the responses sheet.",
+      "disabled": false,
+      "notes": "Updates 'Invoice ID' and 'Sync Status' on the responses sheet. Requires those two columns on the responses tab and a live trigger (row_number only populates on the Google Sheets Trigger, not manual Fetch Test Event).",
       "notesInFlow": true
     },
     {
