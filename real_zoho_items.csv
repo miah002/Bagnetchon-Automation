@@ -1,89 +1,161 @@
-name,item_id,rate,status
-"""Credit Card Processing Fee (3%)""",5729797000000509114,0.0,inactive
-Artisan Kakanin Medley,5729797000000388056,280.0,active
-Artisan Kakanin Special,5729797000000399030,120.0,inactive
-Authentic Dinakdakan,5729797000000434011,280.0,active
-Authentic Sisig  Maharlika,5729797000000434092,300.0,active
-Bagnetchon On-Site Catering Service.,5729797000000365033,250.0,active
-Bagnetchon Signature Catering Experience,5729797000000178012,300.0,active
-Bistek    Tagalog,5729797000000399019,265.0,active
-Broccoli   Shrimp,5729797000000399069,220.0,active
-Buko Pandan,5729797000000465046,270.0,active
-Calamari Squid,5729797000000388034,250.0,active
-Chef Bagnet Sarsa,5729797000000189031,0.0,active
-Chef Service,5729797000000164042,300.0,active
-Chicken  Kare  kare,5729797000000457015,260.0,active
-Chicken Curry,5729797000000465031,250.0,active
-Chop Suey,5729797000000410030,250.0,active
-Chopping Fee,5729797000000207102,50.0,active
-Chopping fee and Chef Service,5729797000000240030,300.0,active
-Classic Chop Suey,5729797000000325019,190.0,active
-Credit card / Debit Card,5729797000000222030,0.0,active
-Customer Discount,5729797000000227047,-24.0,inactive
-Customer Gratuity,5729797000000585023,100.0,active
-Delivery  &  Insurance,5729797000000259114,0.0,active
-Delivery  Date  Time   Location,5729797000000233147,0.0,active
-Delivery  Fee location Date,5729797000000244042,0.0,active
-Delivery / Pick-Up / Meet-Up,5729797000000212023,0.0,inactive
-Delivery date and location,5729797000000226019,0.0,inactive
-Delivery Fee,5729797000000215033,48.0,active
-Delivery Insurance location   Time,5729797000000266038,10.0,active
-Delivery location &  Insurance,5729797000000268020,1.0,active
-Delivery location / Address,5729797000000215082,0.0,inactive
-Discount,5729797000000473047,-50.0,active
-Free Chef  Bagnet Sarsa,5729797000000206063,0.0,active
-FREE Delivery Promo!,5729797000000310023,0.0,active
-Free unlimited Sarsa,5729797000000240041,0.0,active
-Full payment,5729797000000585001,-345.0,active
-Full Payment,5729797000000532018,2118.0,active
-Garlic Shrimp,5729797000000388001,235.0,active
-General Liability (Basic Catering Insurance):,5729797000000240052,80.0,active
-Honey Walnut Shrimp,5729797000000399080,250.0,active
-Insurance Delivery  location  Date,5729797000000266027,10.0,active
-Kare-Kare Beef,5729797000000388023,250.0,active
-Lechon catering,5729797000000118044,500.0,active
-Lechon Mani Paksiw,5729797000000173036,250.0,active
-Less Discount,5729797000000239041,-30.0,active
-Lumpia Shanghai Rolls,5729797000000222019,180.0,active
-LUMPIANG SHANGHAI,5729797000000178001,180.0,active
-Maharlika Sisig,5729797000000173025,250.0,active
-Manila Pansit  Canton-Bihon,5729797000000240019,170.0,active
-On site Chopping fee,5729797000000244019,50.0,active
-On-Site Carving Experience,5729797000000379032,350.0,active
-On-Site Carving Experience  and,5729797000000558025,250.0,active
-Orange Chicken,5729797000000388012,235.0,active
-Pansit  Canton Bihon,5729797000000173078,60.0,active
-Partial Payment,5729797000000358095,-808.0,active
-Payment Confirmation:,5729797000000585018,500.0,active
-PayPal Transaction Fee,5729797000000305001,13.5,active
-Pick-up,5729797000000268167,0.0,active
-Pick-Up  / Meet-Up location,5729797000000218013,0.0,active
-Pick-up /  Meet-up,5729797000000165019,0.0,active
-Pick-up location,5729797000000224019,1.0,active
-Pork Menudo,5729797000000325030,220.0,active
-Pork Siomai,5729797000000410019,250.0,active
-Product Special Discount,5729797000000220071,20.0,active
-PROFESSIONAL SERVICES,5729797000000389001,1740.0,active
-Roasted Cochinillo,5729797000000140023,380.0,active
-Roasted Lechon,5729797000000145019,1100.0,active
-Roasted Lechon Belly,5729797000000179019,120.0,active
-Roasted lechon Cochinillo,5729797000000365198,450.0,active
-Roasted Lechon De Leche,5729797000000225005,480.0,active
-Roasted Lechon Pata,5729797000000211011,96.0,active
-Roasted Lechon Pig,5729797000000144055,420.0,active
-Roasted LechonBelly,5729797000000447029,290.0,active
-ROASTED PIG,5729797000000118035,550.0,active
-Roasted Whole Lechon De Leche,5729797000000170019,480.0,active
-Roasted Whole Pig  Lechon,5729797000000149019,1148.0,active
-Roasted Whole Pig lechon,5729797000000164031,550.0,active
-Roasted. Lechon  pig,5729797000000379011,600.0,active
-Roasted. Lechon De leche,5729797000000571041,500.0,active
-Safety & Compliance,5729797000000178043,200.0,active
-Shanghai Rolls,5729797000000457030,180.0,active
-Special Event Liability & Safety Compliance,5729797000000486042,250.0,active
-Special Event Liability & Safety Coverage ( Insurance fee),5729797000000486037,250.0,active
-Steamed Rice,5729797000000173059,80.0,active
-Tax,5729797000000258001,0.0,active
-Trapul Rice & Mushroom Filling,5729797000000538015,40.0,active
-Truffled rice with Mushroom,5729797000000538055,50.0,active
-✔️On-site chef or staff carving   Fee,5729797000000186025,500.0,active
+zoho_item_id,name,rate,status,description
+5729797000000509114,"""Credit Card Processing Fee (3%)""",0,inactive,"""Secure Transaction Handling Fee - PayPal/Credit Card"""
+5729797000000388056,Artisan Kakanin Medley,280,active,"Artisan Kakanin Medley (Full Tray)
+A premium assortment of handcrafted Filipino rice cakes, featuring a curated selection of traditional textures and flavors. Naturally gluten-free and topped with authentic garnishes."
+5729797000000399030,Artisan Kakanin Special,120,inactive,"Artisan Kakanin Special
+A premium assortment of handcrafted Filipino rice cakes, featuring a curated selection of traditional textures and flavors."
+5729797000000434011,Authentic Dinakdakan,280,active,"Grilled pork finely chopped and tossed in a creamy, tangy dressing with onions and chili—bold, smoky, and richly flavorful Ilocano classic."
+5729797000000434092,Authentic Sisig  Maharlika,300,active,"A premium blend of finely chopped grilled pork, seasoned to perfection and tossed with onions, chili, and signature spices—rich, sizzling, and boldly flavorful."
+5729797000000365033,Bagnetchon On-Site Catering Service.,250,active,"We bring the art of traditional Filipino roasted pork directly to your venue, where our team expertly roasts and carves the Bagnetchon fresh for your guests."
+5729797000000178012,Bagnetchon Signature Catering Experience,300,active,". Live Station / Carving Station
+• Elegant plated presentation of Bagnetchon with curated sides
+• microgreens and deconstructed sawsawan (sauce)
+Long buffet table with a modern Filipino touch , banana leaves, rustic wooden board
+On-site chef or staff carving Bagnetchon in real time
+• Creates a multisensory experience with aroma, chopping sounds, and crispiness
+"
+5729797000000399019,Bistek    Tagalog,265,active,"Thinly sliced premium beef sirloin marinated in a savory calamansi-soy glaze, slow-simmered to tenderness and topped with a generous layer of caramelized onions."
+5729797000000399069,Broccoli   Shrimp,220,active,"Broccoli & Garlic Shrimp ) 1 Full tray
+Succulent shrimp sautéed in a savory garlic-butter glaze, tossed with crisp, garden-fresh broccoli florets for a perfectly balanced and vibrant seafood classic"
+5729797000000465046,Buko Pandan,270,active,"Biko Pandan Dull tray
+A classic Filipino sticky rice dessert infused with fragrant pandan and rich coconut milk, topped with a luscious caramelized latik—sweet, creamy, and perfectly indulgent."
+5729797000000388034,Calamari Squid,250,active,"Calamari Squid (Full Tray)
+Lightly battered squid, fried to golden crisp perfection and served as a savory, crowd-pleasing favorite for any gathering. "
+5729797000000189031,Chef Bagnet Sarsa,0,active,"Chef Bagnet Authentic Sarsa . A true Filipino classic reimagined. Crafted with slow-cooked pork liver, select spices, and natural seasonings, "
+5729797000000164042,Chef Service,300,active,"Chef Bagnet embodies the heart and soul of authentic Filipino cuisine — a passionate culinary craftsman dedicated to preserving the rich traditions of the Philippines while sharing its flavors with the world. With every dish, he carries a deep sense of cultural pride, blending time-honored techniques."
+5729797000000457015,Chicken  Kare  kare,260,active,"Chicken Kare-Kare
+Tender chicken simmered in a rich, savory peanut sauce with fresh vegetables—creamy, hearty, and perfectly paired with bagoong."
+5729797000000465031,Chicken Curry,250,active,"Chicken Curry
+Tender chicken simmered in a rich, aromatic curry sauce infused with spices and coconut milk—savory, creamy, and deeply flavorful."
+5729797000000410030,Chop Suey,250,active,"Chop Suey
+A vibrant mix of fresh vegetables stir-fried to perfection with tender meat and a light savory sauce—crisp, flavorful, and well-balanced in every bite."
+5729797000000207102,Chopping Fee,50,active,On site chopping
+5729797000000240030,Chopping fee and Chef Service,300,active,"Chopping & Chef Services Fee — professional carving, portioning, and on-site chef assistance to ensure proper presentation and serving."
+5729797000000325019,Classic Chop Suey,190,active,"A refined Filipino-stir-fry of fresh market vegetables, tender meats, and seafood in a delicate garlic-oyster sauce—light, vibrant, and perfectly balanced. "
+5729797000000222030,Credit card / Debit Card,0,active,"A 3% credit card processing fee will be applied to all credit/debit card payments items only. Thank you for your understanding.
+"
+5729797000000227047,Customer Discount,-24,inactive,Less 5% Product Discount $24
+5729797000000585023,Customer Gratuity,100,active,"Customer Gratuity
+Thank you very much for your generous tip and support!"
+5729797000000259114,Delivery  &  Insurance,0,active,"Professional food handling & secure packaging 
+On-time delivery guarantee
+Delivery accident or unforeseen delays"
+5729797000000233147,Delivery  Date  Time   Location,0,active,"Lina Ora Santos
+Delivery addres : 
+4924 8th Avenue LA CA 90043
+4:30 pm -5pm for  December 24"
+5729797000000244042,Delivery  Fee location Date,0,active,"Location: 20508 East Lauren Court, Walnut
+Event: JOHN AND MARVIN'S
+SURPRISE Birthday Party
+Date : Jan 24, 2026 (Sat) @ 1pm 
+miss Irma Tesoro "
+5729797000000212023,Delivery / Pick-Up / Meet-Up,0,inactive,"PickUp / MeetUp location
+Front of  Sense karaoke Lounge
+2871 W Lincoln Ave
+Anaheim, CA  92801
+c/o Monty DelaCruz"
+5729797000000226019,Delivery date and location,0,inactive,"November 22 Sat
+3:30PM 
+Sycamore Room, Diamond Bar Center
+1600 Grand Ave, Diamond Bar, GA 91765
+(909) 753-8752"
+5729797000000215033,Delivery Fee,48,active,"Delivery fee applies.
+Guaranteed fresh, warm, and perfectly crispy when it arrives!"
+5729797000000266038,Delivery Insurance location   Time,10,active,
+5729797000000268020,Delivery location &  Insurance,1,active,
+5729797000000215082,Delivery location / Address,0,inactive,
+5729797000000473047,Discount,-50,active,"""Courtesy Discount"" / “Specia Discount"
+5729797000000206063,Free Chef  Bagnet Sarsa,0,active,"Chef Bagnet Authentic Sarsa . A true Filipino classic reimagined. Crafted with slow-cooked pork liver, select spices, and natural seasonings, "
+5729797000000310023,FREE Delivery Promo!,0,active,"Enjoy our crispy, premium lechon delivered straight to your door — FREE delivery on minimum order!"
+5729797000000240041,Free unlimited Sarsa,0,active,"Chef Bagnet Sarsa — a rich, savory Filipino sauce made from slow-cooked pork liver, garlic, and spices, perfect for lechon, bagnet, and grilled meats."
+5729797000000585001,Full payment,-345,active,Plus tip thank you
+5729797000000532018,Full Payment,2118,active,"""This serves to confirm that full payment has been received today, May 23, 2026, from Janica Beck for the outstanding balance of $2,118. Consequently, the corresponding invoice is now considered an Official Receipt."""
+5729797000000388001,Garlic Shrimp,235,active,"Garlic Shrimp (Full Tray) 
+Succulent shrimp sautéed in savory garlic butter, perfectly seasoned for a rich, aromatic flavor—ideal for sharing at any celebration."
+5729797000000240052,General Liability (Basic Catering Insurance):,80,active,"Coverage: Food handling, property damage, customer injury"
+5729797000000399080,Honey Walnut Shrimp,250,active,"Honey Walnut Shrimp 1 Tray
+Crispy, jumbo shrimp tossed in a velvety, sweet-cream glaze and topped with crunchy, honey-glazed walnuts. A signature Chinese-inspired favorite."
+5729797000000266027,Insurance Delivery  location  Date,10,active,
+5729797000000388023,Kare-Kare Beef,250,active,"Kare-Kare Beef (Full Tray)
+Tender beef simmered in a rich, savory peanut sauce, served as a classic Filipino favorite perfect for sharing at any celebration. "
+5729797000000118044,Lechon catering,500,active,"Delivery,  insurance, carving station set up, Chef service and clean up "
+5729797000000173036,Lechon Mani Paksiw,250,active,
+5729797000000239041,Less Discount,-30,active,Special Customer’s discount
+5729797000000222019,Lumpia Shanghai Rolls,180,active,"Chef Bagnet’s Lumpia Shanghai Rolls are made with premium pork, fresh aromatics, and perfectly seasoned "
+5729797000000178001,LUMPIANG SHANGHAI,180,active,"Crispy golden spring rolls filled with seasoned ground pork and vegetables.
+
+"
+5729797000000173025,Maharlika Sisig,250,active,
+5729797000000240019,Manila Pansit  Canton-Bihon,170,active,"Manila Pansit Canton–Bihon — a savory mix of egg noodles and rice noodles tossed with meats, shrimp, fresh vegetables, and classic Filipino seasonings."
+5729797000000244019,On site Chopping fee,50,active,On site chopping fee ( 1 hour only)
+5729797000000379032,On-Site Carving Experience,350,active,"2-Hour On-Site Carving Experience
+Delivers a memorable “Wow! Sarap!” impact with optional live chopping station. Our chef carves Bagnetchon in real time, creating a multisensory experience with irresistible aroma, crisp texture, and engaging presentation."
+5729797000000558025,On-Site Carving Experience  and,250,active,"
+Live Presentation representative / chef staff : Real-time waving and carving by creating an engaging and multi-sensory experience (aroma, presentation, and sound of crunchy texture) to deliver an unforgettable ""Wow! Delicious!"" effect.
+Table includes design with herbs/ fruits  (artificial)"
+5729797000000388012,Orange Chicken,235,active,"Orange Chicken (Full Tray)
+Crispy chicken tossed in a vibrant sweet-and-tangy orange glaze, delivering a flavorful crowd-pleasing favorite for any celebration."
+5729797000000173078,Pansit  Canton Bihon,60,active,"Classic noodles for every celebration. Flavorful, colorful, and made for sharing!"
+5729797000000358095,Partial Payment,-808,active,Thank you for your partial payment. The remaining balance will be due before the event date.
+5729797000000585018,Payment Confirmation:,500,active,"Payment Confirmation:
+""We hereby acknowledge receipt of the full payment amount for this order, collected upon successful delivery. The outstanding balance is now $0.00 and the account is marked as settled. Thank you for choosing us, and we look forward to serving you again!"""
+5729797000000305001,PayPal Transaction Fee,13.5,active,
+5729797000000268167,Pick-up,0,active,11pm Friday 2/13/2026 
+5729797000000218013,Pick-Up  / Meet-Up location,0,active,"PickUp / MeetUp location
+Front of  Sense karaoke Lounge
+2871 W Lincoln Ave
+Anaheim, CA  92801
+Text or call Mel (954) 625-9631 / Chef Bagnet (562)544-9882"
+5729797000000165019,Pick-up /  Meet-up,0,active,Pick-Up is free and without charge.
+5729797000000224019,Pick-up location,1,active,"PickUp / MeetUp location
+Front of  Sense karaoke Lounge
+2871 W Lincoln Ave
+Anaheim, CA  92801
+c/o Monty DelaCruz"
+5729797000000325030,Pork Menudo,220,active,"Full tray 
+Tender pork simmered in a rich tomato sauce with potatoes, carrots, and bell peppers—an authentic Filipino classic, hearty and full of flavor."
+5729797000000410019,Pork Siomai,250,active,"Steamed dumplings filled with premium ground pork, finely seasoned and wrapped in delicate wonton skin—juicy, flavorful, and perfectly paired with soy sauce, calamansi, and chili garlic oil."
+5729797000000220071,Product Special Discount,20,active,"Exclusive Offer for Loyal Customers!
+Enjoy Discount"
+5729797000000389001,PROFESSIONAL SERVICES,1740,active,"Service Description
+Full Event Service Fee  
+(Includes: On-site Lechon
+Carving, 4 Professional Staff, Buffet Setup, Delivery, and Logistics)"
+5729797000000140023,Roasted Cochinillo,380,active,Roasted Cochinillo 35-40 lbs 
+5729797000000145019,Roasted Lechon,1100,active,"Roasted Lechon Pig XL large size 70-75 lbs
+Whole set up, Carving Station , Chef Service, Delivery fee, and Clean up "
+5729797000000179019,Roasted Lechon Belly,120,active,"The star of every Filipino feast: Authentic Roasted Lechon Belly.”“Crunch on the outside, melt-in-your-mouth inside — only from Bagnetchon.”"
+5729797000000365198,Roasted lechon Cochinillo,450,active,"Roasted Cochinillo 15-20 lbs
+Slow-roasted suckling pig with ultra-tender meat and perfectly crisp skin—an elegant, premium centerpiece for any celebration."
+5729797000000225005,Roasted Lechon De Leche,480,active,"Roasted Lechon De Leche 40 lbs. – roasted to golden perfection, juicy and succulent with every bite."
+5729797000000211011,Roasted Lechon Pata,96,active,"Premium-grade pork hock marinated in classic Filipino spices
+	•	Crispy crackling skin with melt-in-your-mouth tenderness"
+5729797000000144055,Roasted Lechon Pig,420,active,Roasted Whole Lechon Pig
+5729797000000447029,Roasted LechonBelly,290,active,"Bagnetchon Lechon Belly
+Slow-roasted boneless pork belly with ultra-crispy skin and juicy, well-seasoned meat—rich, succulent, and expertly crafted for perfect flavor in every slice."
+5729797000000118035,ROASTED PIG,550,active,70-75 lbs ( based on raw weight)
+5729797000000170019,Roasted Whole Lechon De Leche,480,active,"Roasted Lechon De Leche – Young pig roasted to golden perfection, juicy and succulent with every bite.
+“Crispy skin, juicy meat — this is the art of Bagnetchon Authentic Roasted Lechon.”"
+5729797000000149019,Roasted Whole Pig  Lechon,1148,active,"Roasted Whole Pig Lechon 61-65 lbs  
+
+61- 65 lbs $530 x2  $1060. + delivery fee $88 Total $1,148. "
+5729797000000164031,Roasted Whole Pig lechon,550,active,"Roasted Lechon Pig – Bagnetchon Signature Roast
+A masterpiece of Filipino culinary tradition, our whole roasted pig is marinated in a special blend of natural herbs and spices, then slowly spit-roasted over open fire to perfection. "
+5729797000000379011,Roasted. Lechon  pig,600,active,"2-Hour On-Site Carving Experience
+Delivers a memorable “Wow! Sarap!” impact with optional live chopping station. Our chef carves Bagnetchon in real time, creating a multisensory experience with irresistible aroma, crisp texture, and engaging presentation."
+5729797000000571041,Roasted. Lechon De leche,500,active,"Whole suckling pig slow-roasted to a flawless golden perfection. Each portion delivers an incredibly thin, shatteringly crisp crackling that gives way to exceptionally tender, juicy, and succulent meat. Meticulously seasoned with traditional aromatics, it serves as the ultimate show-stopping centerpiece for high-end events."
+5729797000000178043,Safety & Compliance,200,active,"	•	Food safety certifications / permits
+	•	Food handling insurance / liability insurance"
+5729797000000457030,Shanghai Rolls,180,active,Crispy golden spring rolls filled with seasoned ground pork and vegetables—perfectly crunchy on the outside and savory on the inside.
+5729797000000486042,Special Event Liability & Safety Compliance,250,active,"On-site insurance coverage for live whole roasted pig lechon carving service. Includes protection for food handling, customer injury, and property damage.
+• Rate: $250.00"
+5729797000000486037,Special Event Liability & Safety Coverage ( Insurance fee),250,active,"""Food handling"" at ""Customer injury"" 
+Special Event (High Risk)"
+5729797000000173059,Steamed Rice,80,active,"Steamed Rice – Soft, fluffy, and the perfect partner for every lechon feast!"
+5729797000000258001,Tax,0,active,Orange County sales tax: 7.75%
+5729797000000538015,Trapul Rice & Mushroom Filling,40,active,"Heirloom Trapul rice and earthy mushrooms, slow-cooked inside the belly to absorb the rich, savory juices and natural fats of the lechon."
+5729797000000538055,Truffled rice with Mushroom,50,active,"Mushroom & Truffle Rice Core
+A luxurious blend of aromatic truffle rice and plump mushrooms, capturing the ultimate roasted pork flavor from the inside out."
+5729797000000186025,✔️On-site chef or staff carving   Fee,500,active,"Delivers a “Wow! Sarap!” impact, especially with an optional live chopping station
+• On-site chef or staff carving Bagnetchon in real time
+• Creates a multisensory experience with aroma, chopping sounds, and crispiness"
