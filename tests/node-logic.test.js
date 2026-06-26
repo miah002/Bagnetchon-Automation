@@ -154,7 +154,12 @@ ok(inv.invoice_payload.customer_id === 'X', 'customer_id set');
 ok(inv.invoice_payload.line_items.length === 3, 'line items carried');
 ok(!!inv.invoice_payload.shipping_address, 'delivery → shipping_address present');
 ok(inv.invoice_payload.custom_fields.some((c) => c.label === 'cf_source_row_id'), 'cf_source_row_id present');
-ok(/Event:/.test(inv.invoice_payload.notes), 'event/guests in notes');
+ok(!/ORDER SUMMARY/.test(inv.invoice_payload.notes || ''), 'ORDER SUMMARY block removed from notes');
+ok(/guests/i.test(inv.invoice_payload.subject_content), 'event/guests in subject');
+ok(/Phone:/.test(inv.invoice_payload.subject_content), 'phone in subject');
+ok(/Email:/.test(inv.invoice_payload.subject_content), 'email in subject');
+ok(/Delivery location:/.test(inv.invoice_payload.subject_content), 'delivery location in subject (delivery order)');
+ok(/^J\d{6}$/.test(inv.invoice_payload.invoice_number), 'invoice_number = initials + MMDDYY');
 
 console.log('\n[10] Social-media question is NOT treated as a menu item');
 const socialRow = { ...validRow, '“On which social media platform was the advertisement seen?”': 'Facebook' };
@@ -203,9 +208,9 @@ const resolvedA = runNode(C.resolveContact, {
   staticData: sd,
 })[0].json;
 ok(resolvedA.contact_id === 'CID-NEW' && resolvedA.contact_lookup === 'created', 'order A: created contact');
-ok(sd.contactCache && sd.contactCache['new@buyer.com']?.contact_id === 'CID-NEW', 'order A: contact cached by lowercased email');
+ok(sd.contactCache && sd.contactCache['new buyer']?.contact_id === 'CID-NEW', 'order A: contact cached by lowercased name');
 
-// Order B: same email, cache now warm → hit → reuse, NO create branch.
+// Order B: same name, cache now warm → hit → reuse, NO create branch.
 const lookupB = runNode(C.cacheLookup, { nodes: { 'Validate Payload': payloadB }, staticData: sd })[0].json;
 ok(lookupB._cache_hit === true && lookupB._cache_contact_id === 'CID-NEW', 'order B: cache hit reuses contact');
 const resolvedB = runNode(C.resolveContact, {
@@ -215,9 +220,22 @@ const resolvedB = runNode(C.resolveContact, {
 ok(resolvedB.contact_id === 'CID-NEW' && resolvedB.contact_lookup === 'cache', 'order B: resolved from cache, no duplicate created');
 
 // Stale entry (older than TTL) is ignored.
-const sdStale = { contactCache: { 'new@buyer.com': { contact_id: 'OLD', ts: Date.now() - 6 * 60 * 1000 } } };
+const sdStale = { contactCache: { 'new buyer': { contact_id: 'OLD', ts: Date.now() - 6 * 60 * 1000 } } };
 const lookupStale = runNode(C.cacheLookup, { nodes: { 'Validate Payload': payloadA }, staticData: sdStale })[0].json;
 ok(lookupStale._cache_hit === false, 'stale cache entry (>5min) ignored');
+
+// Repeat customer: Zoho name search returns an existing contact → reuse, no create.
+const repeatPayload = { source: 'google_sheet', source_row_id: 'gs:rpt', customer: { email: 'changed@new.com', name: 'Repeat Customer', phone: '999' }, selected_items: [] };
+const repeatLookup = runNode(C.cacheLookup, { nodes: { 'Validate Payload': repeatPayload }, staticData: {} })[0].json;
+const resolvedRepeat = runNode(C.resolveContact, {
+  nodes: {
+    'Validate Payload': repeatPayload,
+    'Contact Cache Lookup': repeatLookup,
+    'Find Contact by Email': { contacts: [{ contact_id: 'CID-EXISTING' }] },
+  },
+  staticData: {},
+})[0].json;
+ok(resolvedRepeat.contact_id === 'CID-EXISTING' && resolvedRepeat.contact_lookup === 'matched_name', 'repeat customer: matched by name, reuses existing contact (no create)');
 
 console.log('\n[12] Success notify — only newly created invoices ping Slack, with order detail');
 const summaries = [

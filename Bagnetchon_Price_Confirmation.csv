@@ -1,0 +1,10 @@
+Menu Item,Size / Weight,Menu Price Range,Zoho Catalog Item (ID),Catalog Price,Action Needed
+Roasted Lechon Belly - Half,8-12 lbs,$120-170,Roasted Lechon Belly (5729797000000179019),$120,Price varies by weight — invoice will flag for manual adjustment
+Roasted Lechon Belly - Full,13-22 lbs,$190-320,Roasted LechonBelly (5729797000000447029),$290,Price varies by weight — invoice will flag for manual adjustment
+Lechon Belly Truffles - Half,8-12 lbs,$160-220,NO ITEM IN ZOHO,,Need to create this item in Zoho Invoice before go-live
+Lechon Belly Truffles - Full,13-22 lbs,$260-440,NO ITEM IN ZOHO,,Need to create this item in Zoho Invoice before go-live
+Roasted Cochinillo,15-21 lbs,$450 fixed,Roasted lechon Cochinillo (5729797000000365198),$450,Perfect match — no action needed
+Lechon De Leche,30-40 lbs,$450-480,Roasted Lechon De Leche (5729797000000225005),$480,Price varies — invoice will flag for manual adjustment
+Medium Whole Lechon,51-59 lbs,$500-550,Roasted Whole Pig lechon (5729797000000164031),$550,Price varies — invoice will flag for manual adjustment
+Large Whole Lechon,60-74 lbs,$550-600,Roasted. Lechon pig (5729797000000379011),$600,Price varies — invoice will flag for manual adjustment
+Extra Large Whole Lechon,75-85 lbs,$600-650,ROASTED PIG (5729797000000118035),$550,PRICE CONFLICT: catalog $550 vs menu $600-650 — need new item or price update in Zoho
