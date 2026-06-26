@@ -156,6 +156,7 @@ ok(inv.invoice_payload.line_items.length === 3, 'line items carried');
 ok(!!inv.invoice_payload.shipping_address, 'delivery → shipping_address present');
 ok(inv.invoice_payload.custom_fields.some((c) => c.label === 'cf_source_row_id'), 'cf_source_row_id present');
 ok(!/ORDER SUMMARY/.test(inv.invoice_payload.notes || ''), 'ORDER SUMMARY block removed from notes');
+ok(!/REVIEW/.test(inv.invoice_payload.notes || ''), 'review flags kept OFF customer invoice notes');
 ok(/guests/i.test(inv.invoice_payload.subject_content), 'event/guests in subject');
 ok(/Phone:/.test(inv.invoice_payload.subject_content), 'phone in subject');
 ok(/Email:/.test(inv.invoice_payload.subject_content), 'email in subject');
