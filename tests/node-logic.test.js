@@ -102,6 +102,7 @@ const C = {
   cacheLookup: nodeCode('02_order_to_invoice.json', 'Contact Cache Lookup'),
   resolveContact: nodeCode('02_order_to_invoice.json', 'Resolve Contact'),
   buildSuccessNotify: nodeCode('01_main.json', 'Build Success Notify'),
+  buildFailureNotify: nodeCode('01_main.json', 'Build Failure Notify'),
 };
 
 console.log('\n[1] Validate Row — valid order');
@@ -261,6 +262,26 @@ ok(notifies[1].review.length === 1, 'review flags carried into success ping');
 const okMsg = runNode(C.formatMessage, { inputItem: notifies[0] })[0].json;
 ok(/Bagnetchon — new invoice/.test(okMsg.text), 'success message uses new-invoice header (not alert)');
 ok(/invoice: INV-1/.test(okMsg.text) && /customer: Alice/.test(okMsg.text) && /items: /.test(okMsg.text), 'success message renders enriched fields');
+
+console.log('\n[13] Failure notify — failed/crashed orders ping Slack, successes & idempotent skips do not');
+const failSummaries = [
+  { ok: true, idempotent: false, source: 'google_sheet', source_row_id: 'gs:a', invoice_id: '1', customer_name: 'Alice' }, // success — no alert
+  { ok: true, idempotent: true,  source: 'google_sheet', source_row_id: 'gs:b', customer_name: 'Bob' }, // idempotent skip — no alert
+  { ok: false, source: 'google_sheet', source_row_id: 'gs:c', customer_name: 'Carol', message: 'invoice create failed: bad item' }, // soft failure — ALERT
+  { error: { message: 'Could not resolve a Zoho contact_id' }, source_row_id: 'gs:d' }, // hard crash item — ALERT
+];
+const failNormalized = [
+  { source_row_id: 'gs:c', customer: { name: 'Carol', phone: '0919', email: 'carol@x.com' }, fulfillment: { date: '08/01/2026', type: 'Delivery', address: 'OC', event_type: 'Wedding', guest_count: 80 }, selected_items: [{ selected_text: 'Roasted Cochinillo' }] },
+  { source_row_id: 'gs:d', customer: { name: 'Dave', phone: '0918', email: 'dave@x.com' }, fulfillment: { date: '07/01/2026', type: 'Pickup' }, selected_items: [{ selected_text: 'Steamed Rice' }] },
+];
+const fails = runNode(C.buildFailureNotify, { inputItems: failSummaries, nodes: { 'Normalize Order': failNormalized } }).map((i) => i.json);
+ok(fails.length === 2, `only failures/crashes alert (got ${fails.length}, expected 2)`);
+ok(fails.every((n) => n.severity === 'error' && n.stage === 'invoice-failed'), 'failure payloads are error/invoice-failed');
+ok(/bad item/.test(fails[0].errors[0]), 'soft failure reason carried');
+ok(/Could not resolve/.test(fails[1].errors[0]), 'hard crash error message carried');
+ok(fails[0].fields.customer === 'Carol' && fails[0].fields.location === 'OC' && /Wedding/.test(fails[0].fields.event), 'failure ping enriched with order detail for manual handling');
+const failMsg = runNode(C.formatMessage, { inputItem: fails[0] })[0].json;
+ok(/Bagnetchon automation alert/.test(failMsg.text) && /errors:/.test(failMsg.text), 'failure message uses alert header + lists errors');
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

@@ -1,0 +1,81 @@
+{
+  "name": "Bagnetchon — Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "err-trigger-0001",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Formats the n8n execution-error payload into a single Slack line block.\n// Fires for ANY unhandled failure in a workflow that names this one as its\n// Error Workflow — the catch-all so no failed run (and no order) is missed.\nconst p = $input.first().json || {};\nconst wf = p.workflow || {};\nconst ex = p.execution || {};\nconst err = ex.error || p.error || {};\nconst node = (err.node && (err.node.name || err.node)) || ex.lastNodeExecuted || 'unknown';\n\nconst lines = [\n  '*Bagnetchon automation alert*',\n  'severity: error',\n  'stage:    workflow-crash',\n  `workflow: ${wf.name || wf.id || 'unknown'}`,\n  `node:     ${node}`,\n  `error:    ${err.message || 'unknown error'}`,\n];\nif (ex.url) { lines.push(''); lines.push(`execution: ${ex.url}`); }\n\nreturn [{ json: { text: lines.join('\\n') } }];"
+      },
+      "id": "err-format-0001",
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.NOTIFY_SLACK_WEBHOOK }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.text }) }}",
+        "options": {}
+      },
+      "id": "err-post-slack-0001",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        300
+      ],
+      "continueOnFail": true,
+      "notes": "Posts to $vars.NOTIFY_SLACK_WEBHOOK. Set that variable for alerts to land."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

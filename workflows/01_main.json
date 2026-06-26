@@ -87,7 +87,8 @@
       "position": [
         1216,
         368
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -153,6 +154,39 @@
       "position": [
         1216,
         592
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ping Slack for any order that FAILED to produce an invoice — so no order is\n// silently missed. Catches soft failures (sub returned ok:false) AND hard sub\n// crashes (Call: Order → Invoice runs with continueOnFail, so a thrown error\n// arrives here as an item carrying `error`). Idempotent skips and successes are\n// NOT failures and are filtered out. Enrich with order detail for manual handling.\nconst orders = $('Normalize Order').all().map((i) => i.json);\nconst byId = new Map(orders.map((o) => [o.source_row_id, o]));\n\nreturn $input.all()\n  .map((e) => e.json)\n  .filter((s) => {\n    if (!s) return false;\n    if (s.error) return true;            // hard crash item (continueOnFail)\n    if (s.ok === true) return false;     // success or idempotent skip\n    return true;                         // ok:false → real failure\n  })\n  .map((s) => {\n    const o = byId.get(s.source_row_id) || {};\n    const c = o.customer || {};\n    const f = o.fulfillment || {};\n    const items = (o.selected_items || []).map((x) => x.selected_text).filter(Boolean);\n    const isPickup = /pick.?up/i.test(String(f.type || ''));\n\n    const fields = {};\n    fields.customer = s.customer_name || c.name || '(unknown)';\n    if (c.phone) fields.phone = c.phone;\n    if (c.email) fields.email = c.email;\n    if (f.type) fields.service = f.type;\n    if (f.date) fields.date = f.date;\n    if (f.address && !isPickup) fields.location = f.address;\n    if (f.event_type || f.guest_count) {\n      fields.event = (f.event_type || '') + (f.guest_count ? ' (' + f.guest_count + ' guests)' : '');\n    }\n    if (items.length) fields.items = items.join(', ');\n\n    const reason = (s.error && (s.error.message || s.error)) || s.message || 'invoice not created';\n\n    return { json: {\n      severity: 'error',\n      stage: 'invoice-failed',\n      source: s.source || 'google_sheet',\n      errors: [String(reason)],\n      fields,\n    } };\n  });"
+      },
+      "id": "a3f1e2d4-fail-notify-0001",
+      "name": "Build Failure Notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "OwMpoe36X7rPNj8l",
+          "cachedResultName": "Bagnetchon — Notify (sub)"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "b4e2f3d5-call-notify-fail-0001",
+      "name": "Call: Notify (failure)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        520
       ]
     },
     {
@@ -246,6 +280,11 @@
             "node": "Build Success Notify",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Build Failure Notify",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -255,6 +294,17 @@
         [
           {
             "node": "Call: Notify (success)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Failure Notify": {
+      "main": [
+        [
+          {
+            "node": "Call: Notify (failure)",
             "type": "main",
             "index": 0
           }
