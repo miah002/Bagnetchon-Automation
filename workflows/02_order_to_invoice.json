@@ -497,8 +497,9 @@
         420
       ],
       "continueOnFail": true,
+      "alwaysOutputData": true,
       "disabled": false,
-      "notes": "Updates 'Invoice ID' and 'Sync Status' on the responses sheet. Requires those two columns on the responses tab and a live trigger (row_number only populates on the Google Sheets Trigger, not manual Fetch Test Event).",
+      "notes": "Updates 'Invoice ID' and 'Sync Status' on the responses sheet. Requires those two columns on the responses tab and a live trigger (row_number only populates on the Google Sheets Trigger, not manual Fetch Test Event). alwaysOutputData + continueOnFail guarantee an item flows to Return Summary even when row_number is null (manual runs) so the caller always gets a summary to notify on.",
       "notesInFlow": true
     },
     {
@@ -875,8 +876,7 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1",
-    "errorWorkflow": "Bagnetchon — Notify (sub)"
+    "executionOrder": "v1"
   },
   "staticData": null,
   "meta": {
