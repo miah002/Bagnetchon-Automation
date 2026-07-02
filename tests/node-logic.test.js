@@ -97,6 +97,7 @@ const C = {
   buildNotify: nodeCode('01_main.json', 'Build Notify Payload'),
   validatePayload: nodeCode('02_order_to_invoice.json', 'Validate Payload'),
   buildLineItems: nodeCode('02_order_to_invoice.json', 'Build Line Items'),
+  buildIdempotencyKey: nodeCode('02_order_to_invoice.json', 'Build Idempotency Key'),
   buildInvoice: nodeCode('02_order_to_invoice.json', 'Build Invoice Payload'),
   formatMessage: nodeCode('03_notify.json', 'Format Message'),
   cacheLookup: nodeCode('02_order_to_invoice.json', 'Contact Cache Lookup'),
@@ -150,7 +151,12 @@ ok(!!siomaiAdhoc && siomaiAdhoc.rate === 250, 'blank id → ad-hoc line with def
 ok(bli2.review.some((r) => /Pork Siomai/.test(r)), 'blanked item flagged for review');
 
 console.log('\n[7] Build Invoice Payload — shape');
-const inv = runNode(C.buildInvoice, { nodes: { 'Build Line Items': { ...order, line_items: bli.line_items, review: bli.review } } })[0].json;
+const idem = runNode(C.buildIdempotencyKey, { nodes: { 'Validate Payload': order } })[0].json;
+ok(/^J\d{6}$/.test(idem.expected_invoice_number), 'idempotency key computes invoice number (initials + MMDDYY)');
+ok(idem.cf_source_row_id === order.source_row_id, 'idempotency key carries source_row_id');
+const inv = runNode(C.buildInvoice, { nodes: { 'Build Line Items': { ...order, line_items: bli.line_items, review: bli.review }, 'Build Idempotency Key': idem } })[0].json;
+ok(inv.invoice_payload.invoice_number === idem.expected_invoice_number, 'invoice uses the number from idempotency key (single source of truth)');
+ok(inv.invoice_payload.reference_number === inv.invoice_payload.invoice_number, 'order# == invoice#');
 ok(inv.invoice_payload.customer_id === 'X', 'customer_id set');
 ok(inv.invoice_payload.line_items.length === 3, 'line items carried');
 ok(!!inv.invoice_payload.shipping_address, 'delivery → shipping_address present');
@@ -239,7 +245,7 @@ const resolvedRepeat = runNode(C.resolveContact, {
 })[0].json;
 ok(resolvedRepeat.contact_id === 'CID-EXISTING' && resolvedRepeat.contact_lookup === 'matched_name', 'repeat customer: matched by name, reuses existing contact (no create)');
 
-console.log('\n[12] Success notify — only newly created invoices ping Slack, with order detail');
+console.log('\n[12] Success notify — every invoice pings Slack (created + already-existing), with order detail');
 const summaries = [
   { ok: true, idempotent: false, source: 'google_sheet', source_row_id: 'gs:a', invoice_id: '1', invoice_number: 'INV-1', customer_name: 'Alice', total: 1280, currency: 'USD', contact_lookup: 'matched_email', review_flags: [] },
   { ok: true, idempotent: true,  source: 'google_sheet', source_row_id: 'gs:b', invoice_id: '2', invoice_number: 'INV-2', customer_name: 'Bob', total: 500, currency: 'USD' }, // skipped — re-run
@@ -251,14 +257,16 @@ const normalizedOrders = [
   { source_row_id: 'gs:d', customer: { name: 'Dave', phone: '0918', email: 'dave@x.com' }, fulfillment: { date: '07/01/2026', type: 'Pickup', address: 'should-be-hidden', event_type: '', guest_count: null }, selected_items: [{ selected_text: 'Steamed Rice Full tray $90' }] },
 ];
 const notifies = runNode(C.buildSuccessNotify, { inputItems: summaries, nodes: { 'Normalize Order': normalizedOrders } }).map((i) => i.json);
-ok(notifies.length === 2, `only created invoices notify (got ${notifies.length}, expected 2)`);
-ok(notifies.every((n) => n.severity === 'info' && n.stage === 'invoice-created'), 'success payloads are info/invoice-created');
+ok(notifies.length === 3, `every order with an invoice notifies incl. idempotent (got ${notifies.length}, expected 3)`);
+ok(notifies.every((n) => n.severity === 'info'), 'all success payloads are info severity');
+ok(notifies[0].stage === 'invoice-created' && notifies[1].stage === 'invoice-exists', 'new vs already-existing invoices are labelled distinctly');
+ok(notifies[1].fields.invoice === 'INV-2 (already invoiced)', 'idempotent re-run pings with "(already invoiced)" marker');
 ok(notifies[0].fields.invoice === 'INV-1' && notifies[0].fields.customer === 'Alice' && notifies[0].fields.total === 'USD 1280', 'fields carry invoice/customer/total');
 ok(notifies[0].fields.phone === '0917' && notifies[0].fields.date === '06/20/2026 4PM' && notifies[0].fields.service === 'Delivery', 'fields carry phone/date/service from normalized order');
 ok(notifies[0].fields.location === 'LA' && /Birthday \(50 guests\)/.test(notifies[0].fields.event), 'delivery location + event/guests included');
 ok(/Roasted Lechon Belly/.test(notifies[0].fields.items) && /Pork Siomai/.test(notifies[0].fields.items), 'ordered items listed');
-ok(!('location' in notifies[1].fields), 'pickup order omits delivery location');
-ok(notifies[1].review.length === 1, 'review flags carried into success ping');
+ok(!('location' in notifies[2].fields), 'pickup order omits delivery location');
+ok(notifies[2].review.length === 1, 'review flags carried into success ping');
 
 const okMsg = runNode(C.formatMessage, { inputItem: notifies[0] })[0].json;
 ok(/Bagnetchon — new invoice/.test(okMsg.text), 'success message uses new-invoice header (not alert)');
