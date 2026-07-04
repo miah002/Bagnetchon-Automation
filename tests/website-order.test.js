@@ -76,9 +76,13 @@ const websiteRow = {
 };
 
 // item_config fixture: kare kare catalogued (real Zoho id), rice uncatalogued.
+// match_text uses PLAIN HYPHENS exactly like item_config_website.csv — this
+// proves the website's em-dash item names still match ASCII-hyphen config rows
+// (normalize folds em-dash -> hyphen on both sides), so a mojibake'd em-dash in
+// the sheet can never silently break matching.
 const itemConfig = [
-  { sheet_column_header: 'website', match_text: 'Beef Kare Kare — Full Tray', item_name: 'Beef Kare Kara', zoho_item_id: '5729797000000388023', active: 'true', default_rate: 250 },
-  { sheet_column_header: 'website', match_text: 'Steamed Rice — Full Tray', item_name: 'Steamed Rice Full Tray', zoho_item_id: '', active: 'true', default_rate: 80 },
+  { sheet_column_header: 'website', match_text: 'Beef Kare Kare - Full Tray', item_name: 'Beef Kare Kara', zoho_item_id: '5729797000000388023', active: 'true', default_rate: 250 },
+  { sheet_column_header: 'website', match_text: 'Steamed Rice - Full Tray', item_name: 'Steamed Rice Full Tray', zoho_item_id: '', active: 'true', default_rate: 80 },
 ];
 
 console.log('\n[1] Validate Website Row');

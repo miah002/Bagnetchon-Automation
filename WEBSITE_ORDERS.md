@@ -50,12 +50,24 @@ Form regression: `node tests/node-logic.test.js` (64 ✓). Website path:
 4. **Google Sheet:** on the **Website Orders** tab, add two header cells at
    the right end: **Invoice ID** and **Sync Status** (row 1). The Apps Script
    leaves them blank; n8n writes them back after invoicing.
-5. **item_config tab:** paste the rows from `item_config_website.csv` under
-   the existing rows (they match the website's exact item names). Rows with a
-   blank `zoho_item_id` still invoice correctly (ad-hoc line at the website
-   price + a [REVIEW] Slack note) — fill the ids in whenever those items get
-   created in Zoho: Sisig Half/Full, Paksiw Half/Full, Caldereta, Chicken
-   Curry, Sarsa 450g, Buko Pandan, Kakanin.
+5. **item_config tab:** paste the rows from **`item_config_website_paste.tsv`**
+   (tab-separated, ready to paste straight into Google Sheets) under the
+   existing rows.
+   - **Do NOT open the file in Excel first** — Excel re-saves it in the wrong
+     encoding and turns the dashes into `â€"`, which breaks matching. Open it
+     in a plain text editor (or just copy from this repo), select all, paste
+     into the sheet.
+   - The `zoho_item_id` values are written with a leading apostrophe
+     (`'5729797...`) so Google Sheets keeps the full 19-digit id as text
+     instead of rounding it to `...450000`. Paste them WITH the apostrophe.
+     After pasting, spot-check one cell shows the full id left-aligned.
+   - Match text uses plain hyphens (`-`), not em-dashes, on purpose — a plain
+     hyphen can't get mangled by encoding, and `normalize()` folds the
+     website's em-dash names onto it anyway.
+   - Rows with a blank `zoho_item_id` still invoice correctly (ad-hoc line at
+     the website price + a [REVIEW] Slack note) — fill the ids in whenever
+     those items get created in Zoho: Sisig Half/Full, Paksiw Half/Full,
+     Caldereta, Chicken Curry, Sarsa 450g, Buko Pandan, Kakanin.
 6. **Activate** workflow 05. Place a website test order → within ~1 min:
    draft invoice in Zoho (number = the BGN ref), Slack ping, Invoice ID +
    Sync Status on the row. Re-run the same row → idempotent skip.
