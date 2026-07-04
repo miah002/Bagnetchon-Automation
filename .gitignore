@@ -17,3 +17,7 @@ n8n_data/
 
 # Logs
 *.log
+
+# n8n live workflow backups (local safety copies)
+live_*_backup_*.json
+tmp_*.json
