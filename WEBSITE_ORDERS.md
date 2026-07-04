@@ -17,7 +17,7 @@ and Slack pings are all shared with the form pipeline.
 | | Form rows | Website rows |
 |---|---|---|
 | Items | checkbox labels, qty always 1 | `2× Beef Kare Kare — Full Tray @ $265; …` (real qty + server-computed price) |
-| Invoice number | customer initials + MMDDYY | the order ref (`BGN-…`) — unique per order, so two same-day orders can't collide |
+| Invoice number | customer initials + MMDDYY | **same** initials + MMDDYY format (computed in 05 from name + timestamp) so form + website invoices look identical. The unique `BGN-…` ref is kept as `cf_source_row_id` for traceability. Same-day + same-customer orders collide on this number just like the form. |
 | Line-item rate | Zoho catalog / item_config default | the website's charged price (overrides catalog so the invoice always matches checkout) |
 | Writeback | `Invoice ID` / `Sync Status` on the form tab | same columns on the **Website Orders** tab |
 

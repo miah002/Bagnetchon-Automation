@@ -97,7 +97,8 @@ ok(vNoAddr.ok === false && vNoAddr.errors.some((e) => /address/i.test(e)), 'deli
 console.log('\n[2] Normalize Website Order');
 const n = runNode(C.normalize, { inputItem: { row: websiteRow }, vars: VARS })[0].json;
 ok(n.source === 'website' && n.source_row_id === 'web:BGN-AB12CD34EF', 'source + source_row_id from ref');
-ok(n.invoice_number_hint === 'BGN-AB12CD34EF', 'invoice_number_hint = order ref');
+ok(n.invoice_number_hint === 'MS070426', `invoice_number_hint = initials+MMDDYY (got ${n.invoice_number_hint})`);
+ok(n.fulfillment.date === '07/04/2026', `timestamp normalized to MM/DD/YYYY (got ${n.fulfillment.date})`);
 ok(n.customer.email === 'maria.santos@example.com', 'email lowercased');
 ok(n.selected_items.length === 2, `2 selected items (got ${n.selected_items.length})`);
 ok(n.selected_items[0].qty === 2 && n.selected_items[0].rate === 265, 'qty 2 + rate 265 parsed');
@@ -114,10 +115,10 @@ console.log('\n[3] Validate Payload (02) accepts website order');
 const vp = runNode(C.validatePayload, { nodes: { 'From Caller': n } })[0].json;
 ok(vp.source === 'website' && vp.selected_items.length === 2, 'website payload valid');
 
-console.log('\n[4] Build Idempotency Key uses the ref');
+console.log('\n[4] Build Idempotency Key uses the form-style number from the hint');
 const key = runNode(C.buildIdempotencyKey, { nodes: { 'Validate Payload': vp } })[0].json;
-ok(key.expected_invoice_number === 'BGN-AB12CD34EF', `invoice number = ref (got ${key.expected_invoice_number})`);
-ok(key.cf_source_row_id === 'web:BGN-AB12CD34EF', 'cf_source_row_id from payload');
+ok(key.expected_invoice_number === 'MS070426', `invoice number = initials+MMDDYY (got ${key.expected_invoice_number})`);
+ok(key.cf_source_row_id === 'web:BGN-AB12CD34EF', 'cf_source_row_id keeps unique BGN ref');
 
 console.log('\n[5] Build Idempotency Key without hint keeps form scheme');
 const formLike = { ...vp };
