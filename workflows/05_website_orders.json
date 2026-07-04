@@ -1,0 +1,328 @@
+{
+  "name": "Bagnetchon — Website Orders Intake (main)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "16gYMBrM9a3pwRNIIKLkkBkLGb7C96alzHHTrqTJVbzA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Website Orders",
+          "mode": "name"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        304,
+        480
+      ],
+      "id": "web-trigger-0001",
+      "name": "Google Sheets Trigger",
+      "notes": "Watches the 'Website Orders' tab the site's Apps Script writes to. After import: re-assign the Google Sheets Trigger credential and re-select the spreadsheet + tab here. Repoint for production by picking the prod spreadsheet.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Runs on ALL rows the trigger emits. Website rows are machine-written by the\n// site's Apps Script, so validation guards against manual edits / half rows,\n// not user typos (the website already validated the customer's input).\nreturn $input.all().map((entry) => {\n  const row = entry.json;\n  const errors = [];\n\n  const ref = String(row['Order Ref'] ?? '').trim();\n  if (!ref) errors.push('Order Ref is missing');\n\n  const email = String(row['Email'] ?? '').trim();\n  if (!email) errors.push('email is missing');\n  else if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) errors.push('email format looks wrong');\n\n  const name = String(row['Name'] ?? '').trim();\n  if (!name) errors.push('name is missing');\n\n  const items = String(row['Items'] ?? '').trim();\n  if (!items) errors.push('no items on the order');\n\n  const fulfillment = String(row['Fulfillment'] ?? '').trim();\n  if (fulfillment.toLowerCase() === 'delivery') {\n    const addr = String(row['Address'] ?? '').trim();\n    if (!addr || addr.toLowerCase() === 'pickup') errors.push('delivery order has no address');\n  }\n\n  return { json: { ok: errors.length === 0, row, errors } };\n});"
+      },
+      "id": "web-validate-0001",
+      "name": "Validate Website Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "web-valid-cond-0001",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "web-valid-if-0001",
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        768,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Maps a \"Website Orders\" row into the SAME normalized payload 01_main\n// produces, so the existing Order -> Invoice sub-workflow is reused unchanged.\n// Website extras the sub understands (see patched 02):\n//   selected_items[].qty / .rate  — real quantities + server-computed prices\n//                                    parsed from \"2× Beef Kare Kare @ $265\"\n//   invoice_number_hint           — the order ref; keeps two same-day orders\n//                                    from one customer from colliding on the\n//                                    initials+date invoice number\nreturn $input.all().map((entry) => {\n  const row = entry.json.row;\n  const ref = String(row['Order Ref'] ?? '').trim();\n\n  const selected_items = String(row['Items'] ?? '')\n    .split(/;\\s*/)\n    .map((s) => s.trim())\n    .filter(Boolean)\n    .map((part) => {\n      const m = part.match(/^(\\d+)\\s*[×x]\\s*(.+?)(?:\\s*@\\s*\\$?([\\d.]+))?$/);\n      if (!m) return { sheet_column_header: 'Items', selected_text: part, qty: 1 };\n      const item = {\n        sheet_column_header: 'Items',\n        selected_text: m[2].trim(),\n        qty: Math.max(1, parseInt(m[1], 10) || 1),\n      };\n      if (m[3] != null) item.rate = Number(m[3]);\n      return item;\n    });\n\n  const fulfillmentType = String(row['Fulfillment'] ?? '').trim() || 'delivery';\n  const isPickup = /pick.?up/i.test(fulfillmentType);\n  const address = String(row['Address'] ?? '').trim();\n\n  return { json: {\n    source: 'website',\n    source_row_id: 'web:' + ref,\n    invoice_number_hint: ref,\n    customer: {\n      email: String(row['Email'] ?? '').trim().toLowerCase(),\n      name: String(row['Name'] ?? '').trim(),\n      phone: String(row['Phone'] ?? '').trim(),\n    },\n    fulfillment: {\n      date: String(row['Timestamp'] ?? '').trim(),\n      type: fulfillmentType,\n      address: (!isPickup && address && address.toLowerCase() !== 'pickup') ? address : null,\n      event_type: '',\n      guest_count: null,\n    },\n    selected_items,\n    order_totals: {\n      subtotal: Number(row['Subtotal']) || 0,\n      tax: Number(row['Tax']) || 0,\n      delivery_fee: Number(row['Delivery Fee']) || 0,\n      total: Number(row['Total']) || 0,\n    },\n    writeback: {\n      kind: 'google_sheet',\n      spreadsheet_id: $vars.GS_WEBSITE_SPREADSHEET_ID || $vars.GS_SPREADSHEET_ID,\n      sheet_name: $vars.GS_WEBSITE_ORDERS_SHEET || 'Website Orders',\n      row_number: row.row_number ?? null,\n    },\n  }};\n});"
+      },
+      "id": "web-normalize-0001",
+      "name": "Normalize Website Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "3mhDUwqqkQKG2sXE",
+          "cachedResultName": "Bagnetchon — Order to Invoice (sub)"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "web-call-invoice-0001",
+      "name": "Call: Order → Invoice",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1216,
+        368
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ping Slack for EVERY website order that has an invoice — newly created OR\n// already existing (idempotent re-run). Rows that produced no invoice go to\n// the failure path. Enrich with the order detail from the normalized payload.\nconst orders = $('Normalize Website Order').all().map((i) => i.json);\nconst byId = new Map(orders.map((o) => [o.source_row_id, o]));\n\nreturn $input.all()\n  .map((e) => e.json)\n  .filter((s) => s && s.ok === true && s.invoice_id)\n  .map((s) => {\n    const o = byId.get(s.source_row_id) || {};\n    const c = o.customer || {};\n    const f = o.fulfillment || {};\n    const items = (o.selected_items || [])\n      .map((x) => (x.qty > 1 ? x.qty + '× ' : '') + x.selected_text)\n      .filter(Boolean);\n    const existed = s.idempotent === true;\n\n    const fields = {};\n    fields.invoice = (s.invoice_number || s.invoice_id) + (existed ? ' (already invoiced)' : '');\n    fields.customer = s.customer_name || c.name || '(unknown)';\n    if (c.phone) fields.phone = c.phone;\n    if (c.email) fields.email = c.email;\n    if (f.type) fields.service = f.type;\n    if (f.address) fields.location = f.address;\n    if (items.length) fields.items = items.join(', ');\n    const t = o.order_totals || {};\n    fields.total = (s.total != null) ? ((s.currency ? s.currency + ' ' : '') + s.total)\n      : (t.total ? '$' + t.total : '(n/a)');\n\n    return { json: {\n      severity: 'info',\n      stage: existed ? 'invoice-exists' : 'invoice-created',\n      source: 'website',\n      fields,\n      review: Array.isArray(s.review_flags) ? s.review_flags : [],\n    } };\n  });"
+      },
+      "id": "web-success-notify-0001",
+      "name": "Build Success Notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "OwMpoe36X7rPNj8l",
+          "cachedResultName": "Bagnetchon — Notify (sub)"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "web-call-notify-ok-0001",
+      "name": "Call: Notify (success)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ping Slack for any website order that FAILED to produce an invoice — soft\n// failures (sub returned ok:false) AND hard sub crashes (continueOnFail items\n// carrying `error`). Idempotent skips and successes are filtered out.\nconst orders = $('Normalize Website Order').all().map((i) => i.json);\nconst byId = new Map(orders.map((o) => [o.source_row_id, o]));\n\nreturn $input.all()\n  .map((e) => e.json)\n  .filter((s) => {\n    if (!s) return false;\n    if (s.error) return true;\n    if (s.ok === true) return false;\n    return true;\n  })\n  .map((s) => {\n    const o = byId.get(s.source_row_id) || {};\n    const c = o.customer || {};\n    const f = o.fulfillment || {};\n    const items = (o.selected_items || [])\n      .map((x) => (x.qty > 1 ? x.qty + '× ' : '') + x.selected_text)\n      .filter(Boolean);\n\n    const fields = {};\n    fields.customer = s.customer_name || c.name || '(unknown)';\n    if (c.phone) fields.phone = c.phone;\n    if (c.email) fields.email = c.email;\n    if (f.type) fields.service = f.type;\n    if (f.address) fields.location = f.address;\n    if (items.length) fields.items = items.join(', ');\n\n    const reason = (s.error && (s.error.message || s.error)) || s.message || 'invoice not created';\n\n    return { json: {\n      severity: 'error',\n      stage: 'invoice-failed',\n      source: 'website',\n      errors: [String(reason)],\n      fields,\n    } };\n  });"
+      },
+      "id": "web-fail-notify-0001",
+      "name": "Build Failure Notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "OwMpoe36X7rPNj8l",
+          "cachedResultName": "Bagnetchon — Notify (sub)"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "web-call-notify-fail-0001",
+      "name": "Call: Notify (failure)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a notify payload for EACH failed row.\nreturn $input.all().map((entry) => {\n  const v = entry.json;\n  return { json: {\n    severity: 'error',\n    stage: 'website-intake-validation',\n    source: 'website',\n    errors: v.errors || ['unknown validation failure'],\n    row: v.row,\n  }};\n});"
+      },
+      "id": "web-badrow-notify-0001",
+      "name": "Build Notify Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "OwMpoe36X7rPNj8l",
+          "cachedResultName": "Bagnetchon — Notify (sub)"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "web-call-notify-badrow-0001",
+      "name": "Call: Notify (validation failure)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1216,
+        592
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Website Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Website Row": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Website Order",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Notify Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Website Order": {
+      "main": [
+        [
+          {
+            "node": "Call: Order → Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call: Order → Invoice": {
+      "main": [
+        [
+          {
+            "node": "Build Success Notify",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Failure Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Success Notify": {
+      "main": [
+        [
+          {
+            "node": "Call: Notify (success)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Failure Notify": {
+      "main": [
+        [
+          {
+            "node": "Call: Notify (failure)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Notify Payload": {
+      "main": [
+        [
+          {
+            "node": "Call: Notify (validation failure)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,5 +1,15 @@
 # Setup Progress
 
+## 2026-07-04 — WEBSITE ORDERS PIPELINE ADDED (see WEBSITE_ORDERS.md)
+
+Website checkout now writes rows to a `Website Orders` tab (Apps Script on the
+sheet). New workflow `05_website_orders.json` watches it and reuses the same
+02/03 sub-workflows. 02 patched (qty/rate support, invoice_number_hint = BGN
+ref, payload-driven writeback) — backward compatible, 64/64 form tests +
+25/25 website tests pass. TO DO in n8n UI: re-import 02, import 05, add
+GS_WEBSITE_* variables, add Invoice ID/Sync Status columns to the tab, paste
+item_config_website.csv rows. Full steps: WEBSITE_ORDERS.md.
+
 ## PRODUCTION DEPLOYMENT (switch fully to real org 871137692)
 
 Decision: new prod Google Form + its own response tab → real Zoho org.
