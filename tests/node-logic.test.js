@@ -117,6 +117,16 @@ ok(vrBad.ok === false, 'bad row rejected');
 ok(vrBad.errors.some((e) => /email/i.test(e)), 'flags bad email');
 ok(vrBad.errors.some((e) => /delivery/i.test(e)), 'flags missing delivery address');
 
+console.log('\n[2b] Validate Row / Normalize Order — new form header "Delivery location / Pick-up "');
+const newHeaderRow = { ...validRow };
+delete newHeaderRow['Delivery location '];
+newHeaderRow['Delivery location / Pick-up '] = '908 Easton st. Placentia 92870';
+const vrNewHeader = runNode(C.validateRow, { inputItem: newHeaderRow })[0].json;
+ok(vrNewHeader.ok === true, 'delivery address recognized under the new form header (no false-positive rejection)');
+const normNewHeader = runNode(C.normalize, { inputItem: { row: newHeaderRow }, vars: VARS })[0].json;
+ok(normNewHeader.fulfillment.address === '908 Easton st. Placentia 92870', 'address captured from the new header');
+ok(!normNewHeader.selected_items.some((s) => s.sheet_column_header.toLowerCase().startsWith('delivery location')), 'delivery-location column not misread as a menu item');
+
 console.log('\n[3] Normalize Order — multi-select split');
 const norm = runNode(C.normalize, { inputItem: { row: validRow }, vars: VARS })[0].json;
 ok(norm.selected_items.length === 3, `3 selected items (got ${norm.selected_items.length})`);
