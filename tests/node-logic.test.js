@@ -134,6 +134,13 @@ ok(norm.customer.email === 'ulanjeremiah@yahoo.com', 'email lowercased');
 ok(norm.fulfillment.type === 'Delivery' && norm.fulfillment.address === '065 purok ipil stb', 'fulfillment captured');
 ok(/^gs:[0-9a-f]{16}$/.test(norm.source_row_id), 'stable hashed source_row_id');
 
+console.log('\n[3b] Normalize Order — truffle series multi-select column also splits');
+const truffleRow = { ...validRow, 'The Grand Truffle Series illet': 'Gourmet Truffled Cochinillo, The Truffled Lechon de Leche Prestige, The Majestic Truffle Lechon (Medium)' };
+const normTruffle = runNode(C.normalize, { inputItem: { row: truffleRow }, vars: VARS })[0].json;
+const truffleItems = normTruffle.selected_items.filter((s) => /Truffle|Truffled/.test(s.selected_text));
+ok(truffleItems.length === 3, `truffle cell splits into 3 selections (got ${truffleItems.length})`);
+ok(truffleItems.every((s) => s.sheet_column_header === 'The Grand Truffle Series illet'), 'each split item keeps the truffle column as its header');
+
 console.log('\n[4] Validate Payload — accepts normalized order');
 const vp = runNode(C.validatePayload, { nodes: { 'From Caller': norm } })[0].json;
 ok(vp.selected_items.length === 3, 'payload valid');
@@ -159,6 +166,26 @@ const bli2 = runNode(C.buildLineItems, { nodes: { 'Resolve Contact': order, 'Loa
 const siomaiAdhoc = bli2.line_items.find((l) => l.name === 'Pork Siomai Full Tray');
 ok(!!siomaiAdhoc && siomaiAdhoc.rate === 250, 'blank id → ad-hoc line with default_rate');
 ok(bli2.review.some((r) => /Pork Siomai/.test(r)), 'blanked item flagged for review');
+
+console.log('\n[6b] Build Line Items — ambiguous match_text disambiguated by column (real "Option 1" bug)');
+const ambiguousCfg = [
+  { sheet_column_header: 'Chop Suey Full tray  $250', match_text: 'Option 1', item_name: 'Chop Suey Full Tray', zoho_item_id: 'CHOPSUEY_ID', active: 'true', default_rate: '250' },
+  { sheet_column_header: 'Capacity: Good for 10–15 guests.\nHalf Roll blurb 2', match_text: 'Option 1', item_name: 'Roasted Lechon Belly Half Roll', zoho_item_id: 'BELLYHALF_ID', active: 'true', default_rate: '120' },
+];
+const ambiguousOrder = {
+  ...order,
+  selected_items: [
+    { sheet_column_header: 'Chop Suey Full tray  $250', selected_text: 'Option 1' },
+    { sheet_column_header: 'Capacity: Good for 10–15 guests.\nHalf Roll blurb 2', selected_text: 'Option 1' },
+    { sheet_column_header: 'Column 41', selected_text: 'Option 1' }, // unmapped mystery question
+  ],
+};
+const bliAmb = runNode(C.buildLineItems, { nodes: { 'Resolve Contact': ambiguousOrder, 'Load item_config': ambiguousCfg } })[0].json;
+ok(bliAmb.line_items.length === 3, `3 lines produced (got ${bliAmb.line_items.length})`);
+ok(bliAmb.line_items[0].item_id === 'CHOPSUEY_ID', 'first "Option 1" (Chop Suey column) resolves to Chop Suey, not Belly');
+ok(bliAmb.line_items[1].item_id === 'BELLYHALF_ID', 'second "Option 1" (Belly-dup column) resolves to Belly Half Roll, not Chop Suey');
+ok(!bliAmb.line_items[2].item_id && bliAmb.line_items[2].rate === 0, 'third "Option 1" under an unmapped column falls to ad-hoc $0, not misattributed');
+ok(bliAmb.review.some((r) => /Column 41/.test(r)), 'unmapped column name surfaces in the review flag for Slack');
 
 console.log('\n[7] Build Invoice Payload — shape');
 const idem = runNode(C.buildIdempotencyKey, { nodes: { 'Validate Payload': order } })[0].json;
