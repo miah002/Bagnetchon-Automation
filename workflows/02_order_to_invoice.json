@@ -525,15 +525,15 @@
           "parameters": [
             {
               "name": "refresh_token",
-              "value": "={{ $vars.ZOHO_REFRESH_TOKEN }}"
+              "value": "REPLACE_WITH_ZOHO_REFRESH_TOKEN"
             },
             {
               "name": "client_id",
-              "value": "={{ $vars.ZOHO_CLIENT_ID }}"
+              "value": "REPLACE_WITH_ZOHO_CLIENT_ID"
             },
             {
               "name": "client_secret",
-              "value": "={{ $vars.ZOHO_CLIENT_SECRET }}"
+              "value": "REPLACE_WITH_ZOHO_CLIENT_SECRET"
             },
             {
               "name": "grant_type",
@@ -550,7 +550,9 @@
       "position": [
         420,
         120
-      ]
+      ],
+      "notesInFlow": true,
+      "notes": "n8n Cloud Variables require the Pro plan (Starter can't create/edit them), so these 3 fields are hardcoded here instead of $vars.ZOHO_*. After import, replace the REPLACE_WITH_ZOHO_* placeholders with the real client_id / client_secret / refresh_token from your password manager or Zoho api-console.com self-client — never commit real values here."
     },
     {
       "parameters": {
