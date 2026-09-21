@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { ProductCard } from "@/components/product-card";
-import { products } from "@/lib/products";
+import { ProductTile } from "@/components/product-tile";
+import { products, type Product } from "@/lib/products";
 
 export const metadata: Metadata = {
   title: "Shop",
@@ -8,29 +8,52 @@ export const metadata: Metadata = {
     "Current HIGHGROUNDS* inventory — every unit bench-tested, serial-logged and graded before listing.",
 };
 
-export default function ShopPage() {
-  const available = products.filter((p) => p.status !== "sold");
+function Section({
+  id,
+  heading,
+  items,
+  priority = false,
+}: {
+  id: string;
+  heading: string;
+  items: Product[];
+  priority?: boolean;
+}) {
+  if (items.length === 0) return null;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-8 pt-16 sm:px-6 sm:pt-20 lg:px-8">
-      <header className="border-b rule pb-12">
-        <p className="label text-steel">Inventory</p>
-        <h1 className="mt-6 font-display text-[clamp(2rem,6vw,3.5rem)] font-bold leading-tight tracking-tight text-ash">
-          Every unit, tested and graded
-        </h1>
-        <p className="mt-6 max-w-xl text-base leading-relaxed text-steel">
-          One-of-one stock. What you see is the actual unit you receive — not a stock photo of a
-          different one. {available.length} units listed.
-        </p>
-      </header>
-
-      <div className="mt-14 grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-        {available.map((product, i) => (
-          <ProductCard key={product.slug} product={product} priority={i < 2} />
+    <section id={id} className="scroll-mt-24">
+      <h2 className="text-[13px] text-ash">{heading}</h2>
+      <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-3">
+        {items.map((product, i) => (
+          <ProductTile key={product.slug} product={product} priority={priority && i === 0} />
         ))}
       </div>
+    </section>
+  );
+}
 
-      <p className="mt-20 max-w-xl border-t rule pt-6 text-sm leading-relaxed text-steel">
+export default function ShopPage() {
+  const live = products.filter((p) => p.status !== "sold");
+  const consoles = live.filter((p) => p.category === "Console");
+  const handhelds = live.filter((p) => p.category === "Handheld");
+
+  return (
+    <div className="px-5 pt-10 pb-24 sm:px-8">
+      <p className="text-[11px] tracking-[0.18em] text-steel uppercase">
+        Inventory · {live.length} units
+      </p>
+      <p className="mt-4 max-w-md text-[13px] leading-relaxed text-steel">
+        One-of-one stock. What you see is the actual unit you receive — not a stock photo of a
+        different one.
+      </p>
+
+      <div className="mt-14 space-y-16">
+        <Section id="consoles" heading="Consoles — Tested and graded" items={consoles} priority />
+        <Section id="handhelds" heading="Handhelds — Arriving this month" items={handhelds} />
+      </div>
+
+      <p className="mt-20 max-w-md border-t rule pt-5 text-[13px] leading-relaxed text-steel">
         Looking for something not listed? We source to order from office pull-outs, auctions and
         the local market. Tell us the model and budget.
       </p>

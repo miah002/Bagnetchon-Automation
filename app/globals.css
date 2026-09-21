@@ -9,6 +9,7 @@
   --color-signal: #dc4030;
   --color-steel: #8b949c;
   --color-ash: #f4f4f2;
+  --color-mist: #e6e6e2;
 
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -58,5 +59,42 @@
 
   .rule {
     border-color: color-mix(in srgb, var(--color-steel) 22%, transparent);
+  }
+
+  .marquee-track {
+    animation: marquee 32s linear infinite;
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+      animation: none;
+    }
+  }
+}
+
+/* Sits in `components` so border/colour utilities still win over it. */
+@layer components {
+  .pill {
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding-inline: 1.25rem;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    transition: background-color 200ms, color 200ms, border-color 200ms;
   }
 }

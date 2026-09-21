@@ -27,6 +27,14 @@ export const statusLabel: Record<Status, string> = {
   sold: "Sold",
 };
 
+/** Short call-to-action used on full-bleed bands. */
+export const actionLabel: Record<Status, string> = {
+  available: "Buy Now",
+  incoming: "Reserve",
+  reserved: "Reserved",
+  sold: "Sold Out",
+};
+
 export const gradeCopy: Record<Product["grade"], string> = {
   New: "Sealed, unopened stock. Bench-tested on arrival before it ships.",
   A: "Light use. No meaningful cosmetic wear at arm's length. Fully functional.",

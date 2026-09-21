@@ -1,11 +1,14 @@
 import Link from "next/link";
 
-const base =
-  "label inline-flex min-h-12 items-center justify-center px-6 transition-colors duration-200 cursor-pointer";
-
 const variants = {
-  solid: "bg-ash text-summit hover:bg-white",
-  outline: "border border-steel/40 text-ash hover:border-ash",
+  /** Primary action on a dark band */
+  light: "bg-ash text-summit hover:bg-white",
+  /** Primary action on a light band */
+  dark: "bg-summit text-ash hover:bg-black",
+  /** Secondary, on dark */
+  ghost: "border-steel/45 text-ash hover:border-ash",
+  /** Secondary, on light */
+  ghostDark: "border-summit/30 text-summit hover:border-summit",
 } as const;
 
 type Variant = keyof typeof variants;
@@ -13,7 +16,7 @@ type Variant = keyof typeof variants;
 export function CtaLink({
   href,
   children,
-  variant = "solid",
+  variant = "light",
   className = "",
 }: {
   href: string;
@@ -21,10 +24,9 @@ export function CtaLink({
   variant?: Variant;
   className?: string;
 }) {
-  const classes = `${base} ${variants[variant]} ${className}`;
-  const external = href.startsWith("http");
+  const classes = `pill cursor-pointer ${variants[variant]} ${className}`;
 
-  if (external) {
+  if (href.startsWith("http")) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className={classes}>
         {children}
@@ -37,4 +39,17 @@ export function CtaLink({
       {children}
     </Link>
   );
+}
+
+/** Non-interactive state chip, e.g. Sold Out / Arriving this month */
+export function StatusPill({
+  children,
+  tone = "dark",
+}: {
+  children: React.ReactNode;
+  tone?: "dark" | "light";
+}) {
+  const style =
+    tone === "dark" ? "border-steel/45 text-steel" : "border-summit/25 text-summit/70";
+  return <span className={`pill ${style}`}>{children}</span>;
 }
